@@ -1,0 +1,18 @@
+# generated build output
+build/
+*.exe
+*.dll
+*.tmp
+*:stream
+
+# Wine prefixes (never commit; the corpus uses ./.pfx)
+.pfx/
+drive_c/
+dosdevices/
+system.reg
+user.reg
+userdef.reg
+.update-timestamp
+
+# host dumps / scratch
+flatline_memory.tmp

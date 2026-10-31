@@ -1,0 +1,39 @@
+tests 5986
+kind {'positive': 2740, 'negative': 3246}
+conf {'documented': 2440, 'probe': 2286, 'standard': 881, 'observed': 279, 'inferred': 100}
+tier {'p2': 1033, 'p0': 3263, 'p1': 1690}
+targets {'ucrtbase': 5606, 'msvcr120': 4728, 'msvcr110': 4389, 'msvcr100': 4371, 'msvcr90': 4068, 'msvcr80': 3008, 'msvcrt': 2189} total builds 28359
+area tests neg probe
+  stdio_printf      1431   747   587
+  conv               281   140   110
+  stdio_file         277   157    76
+  time               244   121    81
+  scanf              237   116    89
+  lowio              215   118    73
+  ucrt_only          211   110    96
+  exports            200   124    75
+  mbcs               197   102    78
+  secure_crt         196   128    55
+  locale             189   100    63
+  math_c99           180    83    61
+  process            163    82    62
+  math_basic         161    88    59
+  errno_param        152    95    61
+  ctype              149    80    64
+  string             145    83    46
+  stdio_char         132    73    46
+  dir                127    74    56
+  heap               127    71    45
+  wstring            126    71    36
+  math_float         109    68    38
+  negative_fatal     105    80    56
+  fpenv              103    55    39
+  exit_signal         97    50    42
+  memory              93    53    32
+  data_exports        88    40    48
+  stdlib              88    47    33
+  env                 79    40    30
+  cpp_runtime         57    42    32
+  math                27     8    17
+distinct funcs/procs named 1654
+cases 19034

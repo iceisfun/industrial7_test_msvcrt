@@ -1,0 +1,157 @@
+lint: 5986 tests, 0 problems
+build: {'BUILT': 28330, 'NOT_IMPORTED': 7, 'COMPILE_FAIL': 22}
+  NOT_IMPORTED  ucrtbase  ct_isascii_exported_probe not imported from ucrtbase.dll: __isascii (absent in this CRT, inline, or resolved from libmingwex)
+  NOT_IMPORTED  msvcr120  ct_isascii_exported_probe not imported from msvcr120.dll: __isascii (absent in this CRT, inline, or resolved from libmingwex)
+  NOT_IMPORTED  msvcr110  ct_isascii_exported_probe not imported from msvcr110.dll: __isascii (absent in this CRT, inline, or resolved from libmingwex)
+  NOT_IMPORTED  msvcr100  ct_isascii_exported_probe not imported from msvcr100.dll: __isascii (absent in this CRT, inline, or resolved from libmingwex)
+  NOT_IMPORTED  msvcr90   ct_isascii_exported_probe not imported from msvcr90.dll: __isascii (absent in this CRT, inline, or resolved from libmingwex)
+  NOT_IMPORTED  msvcr80   ct_isascii_exported_probe not imported from msvcr80.dll: __isascii (absent in this CRT, inline, or resolved from libmingwex)
+  NOT_IMPORTED  msvcrt    ct_isascii_exported_probe not imported from msvcrt.dll: __isascii (absent in this CRT, inline, or resolved from libmingwex)
+  COMPILE_FAIL  ucrtbase  mth_neg_pow_zero_negexp_value /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64-w64-mingw32/lib/libmingwex.a(lib64_libmingwex_a-pow.o): in function `pow':
+      /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:128:(.text+0x1b9): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:125:(.text+0x22e): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:202:(.text+0x595): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64
+  COMPILE_FAIL  msvcr100  mth_neg_pow_zero_negexp_value /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64-w64-mingw32/lib/libmingwex.a(lib64_libmingwex_a-pow.o): in function `pow':
+      /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:128:(.text+0x1b9): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:125:(.text+0x22e): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:202:(.text+0x595): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64
+  COMPILE_FAIL  msvcr90   mth_neg_pow_zero_negexp_value /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64-w64-mingw32/lib/libmingwex.a(lib64_libmingwex_a-pow.o): in function `pow':
+      /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:128:(.text+0x1b9): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:125:(.text+0x22e): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:202:(.text+0x595): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64
+  COMPILE_FAIL  msvcrt    mth_neg_pow_zero_negexp_value /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64-w64-mingw32/lib/libmingwex.a(lib64_libmingwex_a-pow.o): in function `pow':
+      /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:128:(.text+0x1b9): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:125:(.text+0x22e): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:202:(.text+0x595): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64
+  COMPILE_FAIL  ucrtbase  mth_neg_pow_zero_neginf_probe /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64-w64-mingw32/lib/libmingwex.a(lib64_libmingwex_a-pow.o): in function `pow':
+      /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:128:(.text+0x1b9): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:125:(.text+0x22e): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:202:(.text+0x595): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64
+  COMPILE_FAIL  msvcr100  mth_neg_pow_zero_neginf_probe /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64-w64-mingw32/lib/libmingwex.a(lib64_libmingwex_a-pow.o): in function `pow':
+      /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:128:(.text+0x1b9): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:125:(.text+0x22e): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:202:(.text+0x595): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64
+  COMPILE_FAIL  msvcr90   mth_neg_pow_zero_neginf_probe /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64-w64-mingw32/lib/libmingwex.a(lib64_libmingwex_a-pow.o): in function `pow':
+      /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:128:(.text+0x1b9): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:125:(.text+0x22e): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:202:(.text+0x595): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64
+  COMPILE_FAIL  msvcrt    mth_neg_pow_zero_neginf_probe /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64-w64-mingw32/lib/libmingwex.a(lib64_libmingwex_a-pow.o): in function `pow':
+      /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:128:(.text+0x1b9): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:125:(.text+0x22e): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/src/mingw-w64-11.0.1-3build1/mingw-w64-crt/math/x86/pow.def.h:202:(.text+0x595): undefined reference to `_errno'
+      /usr/bin/x86_64-w64-mingw32-ld: /usr/lib/gcc/x86_64-w64-mingw32/13-win32/../../../../x86_64
+  COMPILE_FAIL  ucrtbase  gmc_blank_basic sfun/test_msvcrt/tests/mbcs/gmc_blank_basic.c: In function ‘tc_case_notblank’:
+      /home/iceisfun/test_msvcrt/tests/mbcs/gmc_blank_basic.c:20:66: error: ‘_ismbcblank’ undeclared (first use in this function); did you mean ‘_ismbbkana’?
+         20 | TC_CASE(notblank) { CHECK_EQ_I(_setmbcp(932), 0); CHECK(!mb('a', _ismbcblank)); CHECK(!mb('0', _ismbcblank)); CHECK(!mb(0x0A, _ismbcblank)); CHECK(!mb(0x0D, _ismbcblank)); }
+            |                                                                  ^~~~~~~~~~~
+      /home/iceisfun/test_msvcrt/include/tc.h:93:29: note: in definition of macro ‘CHECK’
+         93 | #define CHECK(e) do { if (!(e)) tc_fail_expr(__FILE__, __LINE__, #e); } while (0
+  COMPILE_FAIL  msvcr120  gmc_blank_basic sfun/test_msvcrt/tests/mbcs/gmc_blank_basic.c: In function ‘tc_case_notblank’:
+      /home/iceisfun/test_msvcrt/tests/mbcs/gmc_blank_basic.c:20:66: error: ‘_ismbcblank’ undeclared (first use in this function); did you mean ‘_ismbbkana’?
+         20 | TC_CASE(notblank) { CHECK_EQ_I(_setmbcp(932), 0); CHECK(!mb('a', _ismbcblank)); CHECK(!mb('0', _ismbcblank)); CHECK(!mb(0x0A, _ismbcblank)); CHECK(!mb(0x0D, _ismbcblank)); }
+            |                                                                  ^~~~~~~~~~~
+      /home/iceisfun/test_msvcrt/include/tc.h:93:29: note: in definition of macro ‘CHECK’
+         93 | #define CHECK(e) do { if (!(e)) tc_fail_expr(__FILE__, __LINE__, #e); } while (0
+  COMPILE_FAIL  ucrtbase  gmc_blank_ideographic_probe In file included from /home/iceisfun/test_msvcrt/tests/mbcs/gmc_blank_ideographic_probe.c:12:
+      /home/iceisfun/test_msvcrt/tests/mbcs/gmc_blank_ideographic_probe.c: In function ‘tc_case_ideo’:
+      /home/iceisfun/test_msvcrt/tests/mbcs/gmc_blank_ideographic_probe.c:18:64: error: ‘_ismbcblank’ undeclared (first use in this function); did you mean ‘_ismbbkana’?
+         18 | TC_CASE(ideo) { CHECK_EQ_I(_setmbcp(932), 0); CHECK(mb(0x8140, _ismbcblank)); }
+            |                                                                ^~~~~~~~~~~
+      /home/iceisfun/test_msvcrt/include/tc.h:93:29: note: in definition of macro ‘CHECK’
+         93 | #define CHECK(e) do { if (!(e)) tc_fail_expr(_
+  COMPILE_FAIL  msvcr120  gmc_blank_ideographic_probe In file included from /home/iceisfun/test_msvcrt/tests/mbcs/gmc_blank_ideographic_probe.c:12:
+      /home/iceisfun/test_msvcrt/tests/mbcs/gmc_blank_ideographic_probe.c: In function ‘tc_case_ideo’:
+      /home/iceisfun/test_msvcrt/tests/mbcs/gmc_blank_ideographic_probe.c:18:64: error: ‘_ismbcblank’ undeclared (first use in this function); did you mean ‘_ismbbkana’?
+         18 | TC_CASE(ideo) { CHECK_EQ_I(_setmbcp(932), 0); CHECK(mb(0x8140, _ismbcblank)); }
+            |                                                                ^~~~~~~~~~~
+      /home/iceisfun/test_msvcrt/include/tc.h:93:29: note: in definition of macro ‘CHECK’
+         93 | #define CHECK(e) do { if (!(e)) tc_fail_expr(_
+  COMPILE_FAIL  ucrtbase  tm_neg_asctime_invalid_fields /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_invalid_fields.c: In function ‘tc_case_year’:
+      /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_invalid_fields.c:33:44: error: expected ‘;’ before ‘}’ token
+         33 | TC_CASE(year) { GOOD; t.tm_year = -1; bad() }
+            |                                            ^~
+            |                                            ;
+  COMPILE_FAIL  msvcr120  tm_neg_asctime_invalid_fields /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_invalid_fields.c: In function ‘tc_case_year’:
+      /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_invalid_fields.c:33:44: error: expected ‘;’ before ‘}’ token
+         33 | TC_CASE(year) { GOOD; t.tm_year = -1; bad() }
+            |                                            ^~
+            |                                            ;
+  COMPILE_FAIL  msvcr110  tm_neg_asctime_invalid_fields /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_invalid_fields.c: In function ‘tc_case_year’:
+      /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_invalid_fields.c:33:44: error: expected ‘;’ before ‘}’ token
+         33 | TC_CASE(year) { GOOD; t.tm_year = -1; bad() }
+            |                                            ^~
+            |                                            ;
+  COMPILE_FAIL  msvcr100  tm_neg_asctime_invalid_fields /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_invalid_fields.c: In function ‘tc_case_year’:
+      /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_invalid_fields.c:33:44: error: expected ‘;’ before ‘}’ token
+         33 | TC_CASE(year) { GOOD; t.tm_year = -1; bad() }
+            |                                            ^~
+            |                                            ;
+  COMPILE_FAIL  msvcr90   tm_neg_asctime_invalid_fields /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_invalid_fields.c: In function ‘tc_case_year’:
+      /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_invalid_fields.c:33:44: error: expected ‘;’ before ‘}’ token
+         33 | TC_CASE(year) { GOOD; t.tm_year = -1; bad() }
+            |                                            ^~
+            |                                            ;
+  COMPILE_FAIL  ucrtbase  tm_neg_asctime_s_fields /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_s_fields.c: In function ‘tc_case_year’:
+      /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_s_fields.c:24:51: error: expected ‘;’ before ‘}’ token
+         24 | TC_CASE(year) { GOOD; t.tm_year = -1; bad(); GOOD }
+            |                                                   ^
+  COMPILE_FAIL  msvcr120  tm_neg_asctime_s_fields /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_s_fields.c: In function ‘tc_case_year’:
+      /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_s_fields.c:24:51: error: expected ‘;’ before ‘}’ token
+         24 | TC_CASE(year) { GOOD; t.tm_year = -1; bad(); GOOD }
+            |                                                   ^
+  COMPILE_FAIL  msvcr110  tm_neg_asctime_s_fields /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_s_fields.c: In function ‘tc_case_year’:
+      /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_s_fields.c:24:51: error: expected ‘;’ before ‘}’ token
+         24 | TC_CASE(year) { GOOD; t.tm_year = -1; bad(); GOOD }
+            |                                                   ^
+  COMPILE_FAIL  msvcr100  tm_neg_asctime_s_fields /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_s_fields.c: In function ‘tc_case_year’:
+      /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_s_fields.c:24:51: error: expected ‘;’ before ‘}’ token
+         24 | TC_CASE(year) { GOOD; t.tm_year = -1; bad(); GOOD }
+            |                                                   ^
+  COMPILE_FAIL  msvcr90   tm_neg_asctime_s_fields /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_s_fields.c: In function ‘tc_case_year’:
+      /home/iceisfun/test_msvcrt/tests/time/tm_neg_asctime_s_fields.c:24:51: error: expected ‘;’ before ‘}’ token
+         24 | TC_CASE(year) { GOOD; t.tm_year = -1; bad(); GOOD }
+            |                                                   ^
+Traceback (most recent call last):
+  File "/home/iceisfun/test_msvcrt/tools/tc.py", line 230, in <module>
+    if __name__ == "__main__": main()
+                               ^^^^^^
+  File "/home/iceisfun/test_msvcrt/tools/tc.py", line 219, in main
+    with cf.ThreadPoolExecutor(min(workers, int(os.environ.get("TC_JOBS", "8")))) as ex: res = list(ex.map(run_one, jobs))
+                                                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 619, in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 317, in _result_or_cancel
+    return fut.result(timeout)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/iceisfun/test_msvcrt/tools/tc.py", line 161, in run_one
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=int(os.environ.get("TC_TIMEOUT", "60")))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 550, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 1209, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 2153, in _communicate
+    stdout = self._translate_newlines(stdout,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 1086, in _translate_newlines
+    data = data.decode(encoding, errors)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xff in position 545: invalid start byte

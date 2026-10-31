@@ -1,0 +1,30 @@
+/* TC
+ * id:    pfu_neg_sprintf_s_null_format
+ * area:  stdio_printf
+ * kind:  negative
+ * funcs: sprintf_s
+ * procs: _set_invalid_parameter_handler
+ * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90
+ * tier:  p0
+ * conf:  documented
+ * ref:   MS docs sprintf_s: NULL format -> invalid parameter handler, -1, EINVAL
+ * note:  buffer state afterwards is not asserted; see pfu_neg_sprintf_s_null_format_buf_probe.
+ */
+#include "tc.h"
+#include <stdio.h>
+#include <errno.h>
+
+TC_CASE(null_format)
+{
+    char b[10]; const char *volatile f = NULL; int n;
+    errno = 0; tc_iph_count = 0;
+    n = sprintf_s(b, 10, f);
+    CHECK_EQ_I(n, -1); CHECK_EQ_I(tc_iph_count, 1); CHECK_EQ_I(errno, EINVAL);
+}
+int main(void)
+{
+    tc_begin();
+    if (!tc_iph_install()) TC_SKIP("no invalid parameter handler API");
+    TC_RUN(null_format);
+    return tc_end();
+}

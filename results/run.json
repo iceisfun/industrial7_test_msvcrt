@@ -1,0 +1,221 @@
+[
+ {
+  "id": "err_neg_default_handler_fatal",
+  "crt": "ucrtbase",
+  "status": "FAIL",
+  "rc": 1,
+  "lines": [
+   "TC FAIL err_neg_default_handler_fatal::child_terminates /home/iceisfun/test_msvcrt/tests/errno_param/err_neg_default_handler_fatal.c:22 code == TC_STATUS_FASTFAIL got=0x4d want=0xc0000409"
+  ]
+ },
+ {
+  "id": "err_neg_invalid_param_handler",
+  "crt": "ucrtbase",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "err_neg_invalid_param_handler",
+  "crt": "msvcr120",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "err_neg_invalid_param_handler",
+  "crt": "msvcr110",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "err_neg_invalid_param_handler",
+  "crt": "msvcr100",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "err_neg_invalid_param_handler",
+  "crt": "msvcr90",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "math_floor_ceil_special",
+  "crt": "ucrtbase",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "math_floor_ceil_special",
+  "crt": "msvcr120",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "math_floor_ceil_special",
+  "crt": "msvcr110",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "math_floor_ceil_special",
+  "crt": "msvcr100",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "math_floor_ceil_special",
+  "crt": "msvcr90",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "math_floor_ceil_special",
+  "crt": "msvcr80",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "math_floor_ceil_special",
+  "crt": "msvcrt",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "printf_sprintf_int_basic",
+  "crt": "ucrtbase",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "printf_sprintf_int_basic",
+  "crt": "msvcr120",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "printf_sprintf_int_basic",
+  "crt": "msvcr110",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "printf_sprintf_int_basic",
+  "crt": "msvcr100",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "printf_sprintf_int_basic",
+  "crt": "msvcr90",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "printf_sprintf_int_basic",
+  "crt": "msvcr80",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "printf_sprintf_int_basic",
+  "crt": "msvcrt",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "str_strlen_basic",
+  "crt": "ucrtbase",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "str_strlen_basic",
+  "crt": "msvcr120",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "str_strlen_basic",
+  "crt": "msvcr110",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "str_strlen_basic",
+  "crt": "msvcr100",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "str_strlen_basic",
+  "crt": "msvcr90",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "str_strlen_basic",
+  "crt": "msvcr80",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "str_strlen_basic",
+  "crt": "msvcrt",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "str_strnlen_dynamic",
+  "crt": "ucrtbase",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "str_strnlen_dynamic",
+  "crt": "msvcr120",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "str_strnlen_dynamic",
+  "crt": "msvcr110",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ },
+ {
+  "id": "str_strnlen_dynamic",
+  "crt": "msvcr100",
+  "status": "PASS",
+  "rc": 0,
+  "lines": []
+ }
+]
