@@ -20,7 +20,7 @@ TC_CASE(status)
 }
 int main(void)
 {
-    volatile FILE *np = NULL; tc_begin();
+    volatile FILE *np = NULL; tc_begin(); if (tc_child_name()) tc_iph_default();
     if (tc_child_name()) { (void)fgetc((FILE *)np); return 77; }
     TC_RUN(status); return tc_end();
 }

@@ -25,7 +25,7 @@ TC_CASE(child_abnormal_exit)
 int main(void)
 {
     tc_begin();
-    if (tc_child_name()) { _putenv(v_null); return 77; }
+    if (tc_child_name()) { tc_iph_default(); _putenv(v_null); return 77; }
     TC_RUN(child_abnormal_exit);
     return tc_end();
 }

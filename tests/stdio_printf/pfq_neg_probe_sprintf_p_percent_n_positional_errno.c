@@ -5,9 +5,13 @@
  * crt:   >=90
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _sprintf_p, printf_s (failure sets errno)
- * note:  PROBE: errno is non-zero after each positional failure class (NULL buffer, NULL format, position gap, buffer too small). The specific value (EINVAL vs ERANGE) is not asserted; only that errno was set and the call returned a negative value.
+ * note:  OBSERVED for case too_small on ucrtbase (Win10 22H2 x64 (19045) ucrtbase.dll observed, raw: "too_small errno != 0"; zzp_probe2 "_sprintf_p small %1$s: r=-2 errno=0 iph=0"):
+ *        _sprintf_p into a too-small buffer returns -2, leaves errno unchanged and does not call the handler; the other three failure classes
+ *        (NULL buffer, NULL format, position gap) still set errno (EINVAL, handler once) as originally probed. Old expectation kept for pre-UCRT
+ *        CRTs (unverified). Stable.
+ *        NOTE: -2 is the raw ucrtbase __stdio_common_v*printf_p export result (observed, not documented); MSVC headers map any negative result to -1.
  */
 #include "tc.h"
 #include "pfq_shim.h"
@@ -39,7 +43,11 @@ TC_CASE(too_small)
 {
     char b[4]; int r; errno = 0; tc_iph_count = 0;
     r = pq_sprintf_p(b, sizeof b, Fbig, "abcdefgh");
+#if TC_CRT_VER >= 140
+    CHECK_EQ_I(r, -2); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);   /* ucrtbase observed: legacy truncation result, errno untouched */
+#else
     CHECK(r < 0); CHECK(errno != 0);
+#endif
 }
 int main(void)
 {

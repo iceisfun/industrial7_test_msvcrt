@@ -38,7 +38,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) {
+    if ((c = tc_child_name()) != NULL) { tc_iph_default();
         if (c[0] == 's') return 77;
         if (c[0] == 'a' && c[1] == 't' && c[2] == 'o' && c[3] == 'f') (void)atof(nul);
         else if (c[4] == '6') (void)_atoi64(nul);

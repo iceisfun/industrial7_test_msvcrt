@@ -6,10 +6,13 @@
  * crt:   >=90
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _create_locale, _wcreate_locale (returns NULL if the locale/category is invalid); parameter validation
+ * note:  Win10 triage (class A): observed on Windows 10 22H2 build 19045, _wcreate_locale with a NULL name or bad category returns NULL silently: errno stays 0 and the invalid-parameter
+ *        handler is NOT invoked (no parameter validation on this path). Assertions record that; stable across 2 runs.
  * note:  Unknown names / UTF-7 (65000) return NULL per docs ("code page ... CP_UTF7 not supported"). NULL name and bad category are
  *        parameter-validation failures (EINVAL + invalid-parameter handler).
+ *        [scope] observed on ucrtbase 19045 only; the legacy CRTs listed in crt: are [unverified] until the P3 runs.
  */
 #include "tc.h"
 #include <locale.h>
@@ -32,7 +35,7 @@ TC_CASE(null_name)
     _locale_t l; tc_iph_count = 0; errno = 0;
     l = tc_p__wcreate_locale(LC_ALL, n_null);
     CHECK(l == NULL); if (l) _free_locale(l);
-    CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);   /* observed on Win10 22H2: silent NULL, no errno, no handler */
     global_is_c();
 }
 TC_CASE(bad_category)
@@ -40,10 +43,10 @@ TC_CASE(bad_category)
     _locale_t l;
     tc_iph_count = 0; errno = 0; v_cat = -1;
     l = tc_p__wcreate_locale(v_cat, L"C"); CHECK(l == NULL); if (l) _free_locale(l);
-    CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);   /* observed on Win10 22H2: silent NULL, no errno, no handler */
     tc_iph_count = 0; errno = 0; v_cat = LC_MAX + 1;
     l = tc_p__wcreate_locale(v_cat, L"C"); CHECK(l == NULL); if (l) _free_locale(l);
-    CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);   /* observed on Win10 22H2: silent NULL, no errno, no handler */
     global_is_c();
 }
 TC_CASE(utf7) { _locale_t l = tc_p__wcreate_locale(LC_ALL, n_utf7); CHECK(l == NULL); if (l) _free_locale(l); global_is_c(); }

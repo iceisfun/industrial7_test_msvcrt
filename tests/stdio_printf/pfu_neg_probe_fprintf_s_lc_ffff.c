@@ -5,10 +5,11 @@
  * funcs: fprintf_s
  * crt:   >=140
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf %lc (wcrtomb failure -> EILSEQ)
- * note:  PROBE: fprintf_s("%lc", 0xFFFF) to a narrow stream in the "C" locale fails with -1 and errno EILSEQ
- *        (U+FFFF is above 0xFF, unencodable in the C locale).
+ * note:  PROBE: fprintf_s("%lc", 0xFFFF) to a narrow stream in the "C" locale returns 0 (nothing written) with errno EILSEQ
+ *        (U+FFFF is above 0xFF, unencodable in the C locale). OBSERVED on Win10 22H2 19045 (the return is 0, not -1).
+ *        A (test bug): observed n == 0, errno == EILSEQ.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -22,7 +23,7 @@ TC_CASE(lc_ffff)
     f = fopen(TMP, "w"); CHECK(f != NULL); if (!f) return;
     errno = 0;
     n = fprintf_s(f, "%lc", (wint_t)wc);
-    CHECK_EQ_I(n, -1);
+    CHECK_EQ_I(n, 0);
     CHECK_EQ_I(errno, EILSEQ);
     fclose(f); remove(TMP);
 }

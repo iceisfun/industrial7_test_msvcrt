@@ -6,10 +6,13 @@
  * procs: __stdio_common_vswprintf_s
  * crt:   ucrtbase
  * tier:  p0
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs swprintf_s, vswprintf_s, _snwprintf_s ("buffer[0] set to 0 on failure", _TRUNCATE truncation returns -1 with STRUNCATE and no handler)
- * note:  errno for too-small buffer is ERANGE per the sprintf_s error-condition table. errno after _TRUNCATE truncation is not asserted
- *        (undocumented for the printf family; STRUNCATE is only documented for the str*_s copy functions).
+ * note:  FIXED test bug (Win10 22H2 x64 (19045) ucrtbase.dll observed, raw: "too_small r == -1 got=1", zzp_probe2 "vswprintf_s small %s(wide arg): r=1 w=[a]" vs
+ *        "vswprintf_s small %ls: r=-1 errno=34 iph=1 b0=0" and "vsnwprintf_s TRUNC %ls: r=-1 iph=0 w=[abc]"): with options 0 the wide printf family uses ISO
+ *        specifiers, so %s consumes a NARROW string; the test passed a wide string to %s (read as "a"). Now %ls (explicitly wide) is used; the
+ *        original expectations (ERANGE, handler once, buf[0]=0, _TRUNCATE gives -1 and "abc" without handler) all hold unchanged.
+ *        Errno after _TRUNCATE truncation is not asserted (undocumented). Stable.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -40,7 +43,7 @@ TC_CASE(too_small)
 {
     wchar_t b[4] = { L'x', L'x', L'x', L'x' }; int r;
     tc_iph_count = 0; errno = 0;
-    r = vs(b, 4, L"%s", L"abcdefgh");
+    r = vs(b, 4, L"%ls", L"abcdefgh");
     CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 1); CHECK_EQ_I(errno, ERANGE);
     CHECK_EQ_I(b[0], 0);
 }
@@ -62,7 +65,7 @@ TC_CASE(truncate_no_handler)
 {
     wchar_t b[4] = { L'x', L'x', L'x', L'x' }; int r;
     tc_iph_count = 0; errno = 0;
-    r = vns(b, 4, (size_t)-1, L"%s", L"abcdefgh");
+    r = vns(b, 4, (size_t)-1, L"%ls", L"abcdefgh");
     CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 0);
     CHECK_WSTR(b, L"abc");
 }

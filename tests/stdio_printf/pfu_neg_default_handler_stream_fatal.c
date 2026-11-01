@@ -9,6 +9,9 @@
  * conf:  documented
  * ref:   MS docs Parameter Validation / _set_invalid_parameter_handler: without a handler an invalid parameter terminates the process; fprintf_s, fwprintf_s, vfprintf_s, printf_s
  * note:  Each fatal call runs in a child process with NO handler installed. Only 'process did not return 77 and exit code != 0' is asserted (exact status is probed elsewhere).
+ *        HARNESS FIX (class F, Win10 22H2 x64 (19045) ucrtbase.dll observed, zzp_probe5/6: every printf/scanf/strcpy_s "default handler" child exited 0x4d = survived): the mingw-w64 startup code installs
+ *        a no-op invalid-parameter handler (call to _set_invalid_parameter_handler(__mingw_invalidParameterHandler) in main's crt startup), so the CRT's own
+ *        default (terminate) never ran. The child now calls tc_iph_default() (= _set_invalid_parameter_handler(NULL)) first. Test expectations unchanged.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -55,7 +58,8 @@ static int cv_fprintf_s(FILE *s, const char *f, ...)
 
 static int child_main(const char *c)
 {
-    FILE *volatile nf = NULL; const char *volatile nfmt = NULL; const wchar_t *volatile nwfmt = NULL;
+    FILE *volatile nf = NULL; const char *volatile nfmt = NULL;
+    tc_iph_default(); const wchar_t *volatile nwfmt = NULL;
     const char *volatile bad = "%y";
     if (tc_strequ(c, "fprintf_s_null_stream")) { P_fprintf_s(nf, "x"); return 77; }
     if (tc_strequ(c, "fwprintf_s_null_format")) { P_fwprintf_s(stdout, nwfmt); return 77; }

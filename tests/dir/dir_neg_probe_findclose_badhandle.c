@@ -6,11 +6,11 @@
  * procs: _findfirst64i32
  * crt:   >=80
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _findclose ("returns 0 if successful, -1 otherwise")
- * note:  Probes the errno left by _findclose on an invalid handle (-1) and on an already-closed handle: expected EBADF
- *        (ERROR_INVALID_HANDLE through the CRT's OS-error mapping). Only the -1 return is documented. The invalid-parameter
- *        handler count is not asserted.
+ * note:  Probes the errno left by _findclose on an invalid handle (-1) and on an already-closed handle. OBSERVED on Win10 22H2
+ *        ucrtbase: -1 return with errno EINVAL (not EBADF) in both cases. Only the -1 return is documented.
+ *        The double_close case reuses a handle already freed by _findclose (use-after-free): heap-state dependent, stable on the reference VM only.
  */
 #include "tc.h"
 #include <io.h>
@@ -24,7 +24,7 @@ TC_CASE(close_minus_one)
     tc_iph_install(); errno = 0;
     r = _findclose(h);
     CHECK_EQ_I(r, -1);
-    CHECK_EQ_I(errno, EBADF);
+    CHECK_EQ_I(errno, EINVAL);
 }
 TC_CASE(double_close)
 {
@@ -39,6 +39,6 @@ TC_CASE(double_close)
     errno = 0;
     r = _findclose(h);
     CHECK_EQ_I(r, -1);
-    CHECK_EQ_I(errno, EBADF);
+    CHECK_EQ_I(errno, EINVAL);
 }
 int main(void) { tc_begin(); TC_RUN(close_minus_one); TC_RUN(double_close); return tc_end(); }

@@ -20,6 +20,7 @@ static int child_main(const char *n)
 {
     cp_t cpy = (cp_t)tc_crt_proc("memcpy_s"), mov = (cp_t)tc_crt_proc("memmove_s");
     if (!cpy || !mov) return 78;
+    tc_iph_default();
     if (tc_strequ(n, "cp_null_dest")) cpy(NULL, 8, (const void *)sbuf, 4);
     else if (tc_strequ(n, "cp_range")) cpy((void *)dbuf, 2, (const void *)sbuf, 4);
     else if (tc_strequ(n, "mv_null_src")) mov((void *)dbuf, 8, NULL, 4);

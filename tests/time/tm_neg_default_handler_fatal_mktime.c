@@ -44,6 +44,7 @@ int main(void)
     TC_LOAD_PROC(_mkgmtime64); TC_LOAD_PROC(_mktime32); TC_LOAD_PROC(asctime); TC_LOAD_PROC(_wasctime);
     TC_LOAD_PROC(_gmtime64); TC_LOAD_PROC(_localtime64);
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();  /* mingw startup installs a no-op handler; restore the CRT default (fast-fail) */
         if (!tc_p__mkgmtime64 || !tc_p__mktime32 || !tc_p_asctime || !tc_p__wasctime || !tc_p__gmtime64 || !tc_p__localtime64) return 78;
         if (!lstrcmpA(c, "mktime64")) _mktime64(NULL);
         else if (!lstrcmpA(c, "mkgmtime64")) tc_p__mkgmtime64(NULL);

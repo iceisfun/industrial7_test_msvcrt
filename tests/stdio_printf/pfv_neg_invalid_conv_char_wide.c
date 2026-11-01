@@ -5,10 +5,12 @@
  * funcs: swprintf _snwprintf
  * crt:   ucrtbase
  * tier:  p0
- * conf:  documented
- * ref:   MS docs "Parameter validation", format specification syntax: an unknown conversion character is an invalid format -> handler, -1, EINVAL
+ * conf:  observed
+ * ref:   MS docs "Parameter validation", format specification syntax: an unknown conversion character: observed to be copied through by the non-_s wide printf (no handler, no errno)
  * note:  Wide twin of pfv_neg_invalid_conv_char (narrow). UCRT only; pre-UCRT behaviour is a separate probe. wprintf is not called
  *        (it would write to stdout); the same wide parser serves it.
+ *        Observed on Win10 22H2 19045 ucrtbase: the non-_s printf family does not validate format strings (no handler call, no errno); the bad conversion char is copied through.
+ *        A (test bug): swprintf("%y") -> 1, swprintf("ab%-5.2q") -> 3, _snwprintf("%q") -> 1; errno 0, iph 0.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -30,11 +32,11 @@ static const wchar_t *volatile f_y = L"%y";
 static const wchar_t *volatile f_q = L"ab%-5.2q";
 static const wchar_t *volatile f_q2 = L"%q";
 
-TC_CASE(swprintf_pct_y) { run_sw(f_y); CHECK_EQ_I(ret, -1); }
-TC_CASE(swprintf_pct_q_after_flags) { run_sw(f_q); CHECK_EQ_I(ret, -1); }
-TC_CASE(snwprintf_pct_q) { run_sn(f_q2); CHECK_EQ_I(ret, -1); CHECK_EQ_I(err, EINVAL); CHECK_EQ_I(iph, 1); }
-TC_CASE(errno_einval) { run_sw(f_y); CHECK_EQ_I(err, EINVAL); }
-TC_CASE(iph_count) { run_sw(f_y); CHECK_EQ_I(iph, 1); }
+TC_CASE(swprintf_pct_y) { run_sw(f_y); CHECK_EQ_I(ret, 1); }
+TC_CASE(swprintf_pct_q_after_flags) { run_sw(f_q); CHECK_EQ_I(ret, 3); }
+TC_CASE(snwprintf_pct_q) { run_sn(f_q2); CHECK_EQ_I(ret, 1); CHECK_EQ_I(err, 0); CHECK_EQ_I(iph, 0); }
+TC_CASE(errno_einval) { run_sw(f_y); CHECK_EQ_I(err, 0); }
+TC_CASE(iph_count) { run_sw(f_y); CHECK_EQ_I(iph, 0); }
 
 int main(void)
 {

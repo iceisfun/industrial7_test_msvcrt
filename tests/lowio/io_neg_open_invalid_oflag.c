@@ -5,9 +5,11 @@
  * crt:   >=140
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _open: _O_WTEXT/_O_U16TEXT/_O_U8TEXT/_O_TEXT/_O_BINARY
- * note:  Probes which combinations of text-mode oflags the UCRT rejects with EINVAL + invalid parameter handler. Reasoning only (ucrt open validates the text-mode bits); each combination is its own case. _O_BINARY|_O_TEXT was removed: the CRT is believed to let one flag win silently rather than reject it.
+ * note:  Probes which combinations of text-mode oflags the UCRT rejects. OBSERVED on Win10 22H2 ucrtbase: _O_WTEXT|_O_U16TEXT
+ *        and _O_U8TEXT|_O_U16TEXT are BOTH accepted (a descriptor is returned, errno 0, no invalid-parameter call): the UCRT
+ *        lets one flag win silently. The old EINVAL expectation was wrong.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -32,15 +34,15 @@ static int slurp(const char *n, char *b, int cap)
 static void rm(const char *n) { SetFileAttributesA(n, FILE_ATTRIBUTE_NORMAL); DeleteFileA(n); }
 
 #define N "tc_io_neg_open_invalid_oflag_" TC_CRT_DLL ".tmp"
-static void bad(int oflag)
+static void bad(int oflag)   /* OBSERVED on Win10 22H2: these combinations are accepted (fd>=0, errno 0, no handler call) */
 {
     int fd;
     CHECK(tc_iph_install());
     rm(N); tc_iph_count = 0; errno = 0;
     fd = _open(N, oflag | _O_CREAT | _O_WRONLY, _S_IREAD | _S_IWRITE);
-    CHECK_EQ_I(fd, -1);
-    CHECK_EQ_I(errno, EINVAL);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK(fd >= 0);
+    CHECK_EQ_I(errno, 0);
+    CHECK_EQ_I(tc_iph_count, 0);
     if (fd >= 0) _close(fd);
     rm(N);
 }

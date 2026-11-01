@@ -6,10 +6,11 @@
  * procs: __stdio_common_vsscanf
  * crt:   win10
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs Parameter validation; scanf_s
- * note:  PROBES (a) whether a too-small scanf_s buffer sets errno==ERANGE and invokes the invalid-parameter handler, and
- *        (b) whether a zero buffer size sets EINVAL, invokes the handler and returns 0 or EOF. Most likely values asserted.
+ * note:  Win10 22H2 (observed): a %s with the secure-CRT option (options=1) into a buffer of 3 (or 0) bytes for "abcdef" returns 0 with errno ENOMEM (12)
+ *        and no invalid-parameter handler call; with 3 bytes the buffer is terminated (b[0]==0). The size argument is unsigned int, as the MS docs for scanf_s specify.
+ *        Observed ENOMEM instead of the ERANGE the old expectation guessed (not documented).
  */
 #include "tc.h"
 #include <stdarg.h>
@@ -35,8 +36,9 @@ TC_CASE(small_buffer)
     errno = 0; tc_iph_count = 0;
     r = xs("abcdef", "%s", b, 3u);
     CHECK_EQ_I(r, 0);
-    CHECK_EQ_I(errno, ERANGE);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(errno, ENOMEM);   /* observed on Win10 22H2: ENOMEM (12), not ERANGE ... */
+    CHECK_EQ_I(tc_iph_count, 0); /* ... and no handler call */
+    CHECK_EQ_I(b[0], 0);
 }
 TC_CASE(zero_size)
 {
@@ -44,9 +46,9 @@ TC_CASE(zero_size)
     memset(b, 'z', sizeof b);
     errno = 0; tc_iph_count = 0;
     r = xs("abcdef", "%s", b, 0u);
-    CHECK(r == 0 || r == -1);
-    CHECK(errno == EINVAL || errno == ERANGE);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 0);
+    CHECK_EQ_I(errno, ENOMEM);
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 
 int main(void)

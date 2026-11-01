@@ -8,7 +8,9 @@
  * kind:  negative
  * conf:  observed
  * ref:   MS docs sprintf_s: buffer too small invokes the invalid parameter handler (default terminates)
- * note:  Exact status 0xC0000409 (fast-fail) is observed Win10 behaviour; docs only say the process terminates.
+ * note:  Exact status 0xC0000409 (fast-fail) is observed Win10 behaviour; docs only say the process terminates. The child first restores the CRT's
+ *        default invalid-parameter handler with tc_iph_default(): the mingw-w64 startup code installs a no-op handler, which otherwise makes the
+ *        child survive (exit 77).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -27,6 +29,7 @@ int main(void)
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
         char b[2]; volatile int v = 12345;
+        tc_iph_default();
         sprintf_s(b, sizeof b, "%d", v);
         return 77;
     }

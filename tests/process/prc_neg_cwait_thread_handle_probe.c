@@ -5,11 +5,13 @@
  * crt:   all
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _cwait (process handles only; -1 on error)
- * note:  PROBE: _cwait is documented for process handles. Handing it a THREAD handle is expected to fail (GetExitCodeProcess
- *        rejects a thread handle) with -1. Three independent guesses, one case each: return -1; *termstat untouched on failure;
- *        handle not closed by the CRT on failure. The latter two are only checked when -1 was returned.
+ * note:  Observed on Win10 22H2 19045 ucrtbase: _cwait on a THREAD handle returns -1, stores -1 into *termstat (not left
+ *        untouched) and has already closed the handle (a later CloseHandle fails). The old guesses (termstat untouched, handle
+ *        left open) were wrong; the -1 return stays as before.
+ *        handle_closed_by_crt assumes the handle value is not reused by another object between the CRT close and the test's own
+ *        CloseHandle (single-threaded test, accepted; observed stable).
  */
 #include "tc.h"
 #include <process.h>
@@ -33,6 +35,6 @@ static void run(void)
 }
 /* each guess in its own case so one wrong guess cannot mask another */
 TC_CASE(thread_handle_fails)   { run(); CHECK(g_r != -2); CHECK_EQ_I(g_r, -1); }
-TC_CASE(termstat_untouched)    { run(); if (g_r == -1) CHECK_EQ_I(g_st, 0x5A5A); }
-TC_CASE(handle_not_closed)     { run(); if (g_r == -1) CHECK_EQ_I(g_closeable, 1); }
-int main(void) { tc_begin(); TC_RUN(thread_handle_fails); TC_RUN(termstat_untouched); TC_RUN(handle_not_closed); return tc_end(); }
+TC_CASE(termstat_set_to_minus1) { run(); CHECK_EQ_I(g_r, -1); CHECK_EQ_I(g_st, -1); }   /* observed: *termstat = -1 on failure */
+TC_CASE(handle_closed_by_crt)   { run(); CHECK_EQ_I(g_r, -1); CHECK_EQ_I(g_closeable, 0); } /* observed: the CRT closed the handle even though it failed */
+int main(void) { tc_begin(); TC_RUN(thread_handle_fails); TC_RUN(termstat_set_to_minus1); TC_RUN(handle_closed_by_crt); return tc_end(); }

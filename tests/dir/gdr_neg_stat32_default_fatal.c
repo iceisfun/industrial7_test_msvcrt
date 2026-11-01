@@ -33,7 +33,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
-        struct _stat32 st; v_path = NULL; v_fd = -1;
+        struct _stat32 st; v_path = NULL; v_fd = -1; tc_iph_default();
         if (c[0] == 'n') _stat32(v_path, &st); else _fstat32(v_fd, &st);
         return 77;
     }

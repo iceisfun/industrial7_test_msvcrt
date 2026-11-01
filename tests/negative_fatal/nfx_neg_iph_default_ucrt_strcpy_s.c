@@ -33,6 +33,7 @@ int main(void)
     TC_LOAD_PROC(strcpy_s); TC_LOAD_PROC(memcpy_s);
     if ((n = tc_child_name()) != NULL) {
         if (!tc_p_strcpy_s || !tc_p_memcpy_s) return 78;
+        tc_iph_default();
         if (n[0] == 'z') tc_p_strcpy_s(d, 0, s);
         else if (n[0] == 'm') tc_p_memcpy_s(NULL, 8, s, 4);
         else tc_p_strcpy_s(NULL, 8, s);

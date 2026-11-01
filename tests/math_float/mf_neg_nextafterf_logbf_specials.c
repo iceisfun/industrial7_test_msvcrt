@@ -6,7 +6,8 @@
  * crt:   ucrtbase msvcr120
  * tier:  p1
  * kind:  negative
- * conf:  standard
+ * conf:  observed
+ * note:  A: _logbf is the MS-specific underscore function (not C11 logb); observed on Win10 19045 ucrtbase (FMA3/AVX2 CPU) _logbf(-inf) = 0xff800000 (-inf) (raw: tc_p__logbf(-vinf) == vinf got=0xff800000; probe: _logb(-inf) = -inf while C logb(-inf) = +inf), so the old logb(+-inf)=+inf expectation was wrong for _logbf. For TC_CRT_VER < 140 the original +inf expectation is kept [unverified on msvcr120].
  * ref:   C11 7.12.11.3 + F.10.8.3 nextafter (overflow -> inf, NaN propagates, nextafter(x,x)=x), F.10.3.11 logb(+-0)=-inf, logb(+-inf)=+inf; MS docs _logb, _nextafter
  */
 #include "tc.h"
@@ -15,7 +16,13 @@ TC_DECL_PROC(float, _nextafterf, (float, float)); TC_DECL_PROC(float, _logbf, (f
 static volatile float v0 = 0.0f, v1 = 1.0f, vinf, vnan, vmax = FLT_MAX, v3 = 3.0f;
 
 TC_CASE(logb_zero) { if (!tc_p__logbf) TC_SKIP("absent"); CHECK_BITS_F(tc_p__logbf(v0), -vinf); CHECK_BITS_F(tc_p__logbf(-v0), -vinf); }
-TC_CASE(logb_inf) { if (!tc_p__logbf) TC_SKIP("absent"); CHECK_BITS_F(tc_p__logbf(vinf), vinf); CHECK_BITS_F(tc_p__logbf(-vinf), vinf); }
+TC_CASE(logb_inf) { if (!tc_p__logbf) TC_SKIP("absent"); CHECK_BITS_F(tc_p__logbf(vinf), vinf); 
+#if TC_CRT_VER >= 140
+    CHECK_BITS_F(tc_p__logbf(-vinf), -vinf); /* A: observed ucrtbase returns -inf */
+#else
+    CHECK_BITS_F(tc_p__logbf(-vinf), vinf);  /* original [unverified on msvcr120] */
+#endif
+}
 TC_CASE(logb_nan) { if (!tc_p__logbf) TC_SKIP("absent"); CHECK_IS_NAN(tc_p__logbf(vnan)); }
 TC_CASE(nextafter_nan) { if (!tc_p__nextafterf) TC_SKIP("absent"); CHECK_IS_NAN(tc_p__nextafterf(vnan, v1)); CHECK_IS_NAN(tc_p__nextafterf(v1, vnan)); }
 TC_CASE(nextafter_overflow) { if (!tc_p__nextafterf) TC_SKIP("absent"); CHECK_BITS_F(tc_p__nextafterf(vmax, vinf), vinf); CHECK_BITS_F(tc_p__nextafterf(-vmax, -vinf), -vinf); }

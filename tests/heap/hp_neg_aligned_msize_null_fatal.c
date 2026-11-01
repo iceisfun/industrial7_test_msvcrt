@@ -23,6 +23,7 @@ TC_CASE(null_terminates)
 int main(void)
 {
     if (tc_begin(), tc_child_name()) {
+        tc_iph_default();
         void *volatile p = NULL;
         (void)_aligned_msize(p, 16, 0);
         return 77;

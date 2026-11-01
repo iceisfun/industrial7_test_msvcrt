@@ -31,7 +31,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) {
+    if ((c = tc_child_name()) != NULL) { tc_iph_default();
         _locale_t loc = _create_locale(LC_ALL, "C");
         if (c[0] == 's') return 77;
         vp = NULL;

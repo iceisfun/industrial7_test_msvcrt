@@ -18,7 +18,7 @@ static const char *volatile g_nul = NULL;
 static int child_main(const char *m)
 {
     FILE *volatile f;
-    if (tc_strequ(m, "fatal")) { f = popen(g_nul, "r"); (void)f; return 77; }
+    if (tc_strequ(m, "fatal")) { tc_iph_default(); f = popen(g_nul, "r"); (void)f; return 77; }
     if (tc_strequ(m, "ctrl")) {
         if (!tc_iph_install()) return 79;
         f = popen(g_nul, "r");

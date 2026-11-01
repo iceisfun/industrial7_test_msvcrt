@@ -20,7 +20,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) { size_t n; _dupenv_s(NULL, &n, "PATH"); return 77; }
+    if ((c = tc_child_name()) != NULL) { size_t n; tc_iph_default(); _dupenv_s(NULL, &n, "PATH"); return 77; }
     TC_RUN(child_abnormal_exit);
     return tc_end();
 }

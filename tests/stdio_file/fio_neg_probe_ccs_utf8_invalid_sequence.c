@@ -5,11 +5,12 @@
  * funcs: fopen fgetwc fclose ferror feof
  * crt:   >=80
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs fopen (ccs=UTF-8), fgetwc
  * note:  Probes how a ccs=UTF-8 text stream reacts to malformed UTF-8: (a) 41 C3 28 -> L'A' then WEOF (+EILSEQ),
  *        (b) lone 0x80 continuation -> WEOF (+EILSEQ), (c) 3-byte sequence truncated by EOF (E2 82) -> WEOF with
  *        eof or error state set. errno for (c) is deliberately not asserted.
+ *        OBSERVED (Win10 22H2, class A): 41 C3 28 reads L'A', U+FFFD, L'(', WEOF with errno 0 (raw: c2 == WEOF; errno == EILSEQ got=0). Lone 0x80 -> WEOF/EILSEQ and truncated E2 82 -> WEOF/ferror (EINVAL) unchanged.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -34,8 +35,10 @@ TC_CASE(invalid_continuation)
     f = fopen(NAME, "r, ccs=UTF-8"); CHECK(f != NULL); if (!f) return;
     c1 = fgetwc(f); errno = 0; c2 = fgetwc(f);
     CHECK_EQ_I(c1, L'A');
-    CHECK(c2 == WEOF);
-    CHECK_EQ_I(errno, EILSEQ);
+    CHECK_EQ_U(c2, 0xFFFD);   /* observed: bad lead C3 followed by 28 -> U+FFFD, no errno, no WEOF */
+    CHECK_EQ_I(errno, 0);
+    CHECK_EQ_I(fgetwc(f), L'(');   /* the 0x28 is not swallowed */
+    CHECK(fgetwc(f) == WEOF);
     fclose(f);
 }
 TC_CASE(lone_continuation)

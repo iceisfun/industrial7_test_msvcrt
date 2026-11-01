@@ -6,7 +6,9 @@
  * tier:  p1
  * conf:  documented
  * ref:   MS docs sprintf_s, _snprintf_s, swprintf_s, _snwprintf_s, fprintf_s, fwprintf_s (UCRT inline wrappers call the __stdio_common_v*_s workers with options 0)
- * note:  Direct calls of the UCRT printf workers; success paths only. Worker signatures follow corecrt_stdio_config.h/stdio.h of the Windows SDK: (options, [stream|buffer, bufcount, [maxcount,]] format, locale, arglist).
+ * note:  Direct calls of the UCRT printf workers; success paths only. Worker signatures follow corecrt_stdio_config.h/stdio.h of the Windows SDK: (options,
+ *        [stream|buffer, bufcount, [maxcount,]] format, locale, arglist). The wide stream is opened in TEXT mode ("w"): observed on Windows 10 22H2, a
+ *        binary-mode ("wb") ANSI stream receives the raw UTF-16 code units (w,0,=,0,o,0,k,0), only text mode converts to multibyte "w=ok".
  */
 #include "tc.h"
 #include <stdio.h>
@@ -72,7 +74,7 @@ TC_CASE(vfprintf_s_file)
 }
 TC_CASE(vfwprintf_s_file)
 {
-    FILE *f = fopen("tc_pfu_direct_w.tmp", "wb"); char b[32]; int r;
+    FILE *f = fopen("tc_pfu_direct_w.tmp", "w"); char b[32]; int r;
     CHECK(f != NULL); if (!f) return;
     r = w_vfwprintf_s(f, L"w=%ls", L"ok");   /* ANSI-mode stream: wide output is converted to multibyte (docs fwprintf) */
     fclose(f);

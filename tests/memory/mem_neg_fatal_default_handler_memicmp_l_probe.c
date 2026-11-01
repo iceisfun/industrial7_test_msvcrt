@@ -21,6 +21,7 @@ static int child_main(const char *n)
 {
     mil_t mil = (mil_t)tc_crt_proc("_memicmp_l");
     if (!mil) return 78;
+    tc_iph_default();
     if (tc_strequ(n, "icmp_null")) _memicmp(v_null, cb, 3);
     else if (tc_strequ(n, "icmp_l_null")) mil(v_null, cb, 3, NULL);
     return 77;

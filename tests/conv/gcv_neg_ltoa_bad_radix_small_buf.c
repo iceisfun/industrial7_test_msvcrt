@@ -5,12 +5,12 @@
  * crt:   ucrtbase
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _ltoa (no documented behaviour for radix outside 2..36 in the non-_s function)
- * note:  ucrtbase only: legacy CRTs divide by zero (radix 0) or loop (radix 1) in the non-_s routine. PROBING: _ltoa with radix 0, 1, 37 does not crash, never writes beyond a 34-byte buffer, and (when it returns)
- *        the guard bytes after buf[33] are intact. On CRTs with a fatal default invalid-parameter handler each call runs
- *        in a child; child exit 10 = returned and guard intact, 11 = guard damaged. Return value/buffer contents are not asserted.
- *        Pre-existing cv_neg_itoa_bad_radix_probe asserts buf[0]==0/EINVAL (ucrtbase, radix 40) - not duplicated here.
+ * note:  OBSERVED (Win10 22H2 19045 ucrtbase, run twice; class C): the non-_s _ltoa neither validates nor reports a bad radix: radix 0 divides by zero
+ *        (0xC0000094), radix 1 never terminates its digit loop and ends in an access violation (0xC0000005), radix 37 returns normally and writes
+ *        no more than the 34-byte buffer (guard intact, child exit 10). The original guess (all three return, guard intact) held only for 37.
+ *        Children assert these exact codes.
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -35,8 +35,10 @@ static void run(const char *n)
     tc_hex(code, b); tc_write("TC NOTE " TC_TEST_ID "::"); tc_write(n); tc_write(" exit="); tc_write(b); tc_write("\n");
     CHECK(ok); CHECK_EQ_U(code, 10);
 }
-TC_CASE(r0) { run("r0"); }
-TC_CASE(r1) { run("r1"); }
+/* observed Win10 22H2 ucrtbase: _ltoa does not validate the radix. radix 0 -> divide by zero (0xC0000094); radix 1 -> endless digit loop
+ * ends in an access violation (0xC0000005, class C); radix 37 returns normally with the guard intact. */
+TC_CASE(r0) { DWORD code = 0; int ok = tc_spawn_self("r0", &code, 20000); CHECK(ok); CHECK_EQ_U(code, 0xC0000094u); }
+TC_CASE(r1) { DWORD code = 0; int ok = tc_spawn_self("r1", &code, 20000); CHECK(ok); CHECK_EQ_U(code, 0xC0000005u); }
 TC_CASE(r37) { run("r37"); }
 
 int main(void)

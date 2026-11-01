@@ -5,10 +5,12 @@
  * funcs: sprintf_s
  * crt:   ucrtbase
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.21.6.1 (negative * precision is taken as omitted); MS docs printf precision
- * note:  Probes (1) "%.99999999999d" (precision digits overflow int) terminates and either fails (-1 with iph==1) or succeeds;
- *        run in a child (exit 30 = success, 31 = -1 with iph==1, 32 = -1 w/o iph). (2) "%.*d" with INT_MIN precision acts as no precision.
+ * note:  OBSERVED (Win10 22H2 x64 (19045) ucrtbase.dll observed, zzp_probe2: child "prec_ovf" exit 0x20): sprintf("%.99999999999d") (precision digits overflow int) terminates
+ *        normally and FAILS with -1 WITHOUT calling the invalid-parameter handler (child exit 32 = -1, iph==0). Old expectation (exit
+ *        30 success or 31 -1+iph) was wrong. The text-parsing overflow is a plain failure path, not a parameter-validation path.
+ *        (2) "%.*d" with INT_MIN precision acts as no precision. Stable.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -17,7 +19,7 @@
 TC_CASE(digits_overflow_child)
 {
     DWORD code = 0; int ran = tc_spawn_self("ovf", &code, 20000);
-    CHECK(ran); CHECK_EQ_U(code == 30 || code == 31, 1);
+    CHECK(ran); CHECK_EQ_U(code, 32);
 }
 TC_CASE(star_int_min)
 {

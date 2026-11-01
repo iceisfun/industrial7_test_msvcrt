@@ -25,6 +25,7 @@ static wchar_t **volatile v_nctx;
 static int child_main(const char *n)
 {
     char s[8] = "a b", d[3]; wchar_t w[8] = L"a b", wb[16]; char *c = NULL; char b[2]; errno_t r;
+    tc_iph_default();
     if (tc_strequ(n, "strtok_s")) strtok_s(s, v_nd, &c);
     else if (tc_strequ(n, "wcstok_s")) wcstok_s(w, L" ", v_nctx);
     else if (tc_strequ(n, "i64toa_s")) _i64toa_s(1234567LL, b, 2, 10);

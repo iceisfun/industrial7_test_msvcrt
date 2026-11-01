@@ -6,10 +6,10 @@
  * procs: _set_invalid_parameter_handler
  * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf; UCRT format-string state machine
- * note:  PROBES: each of "%" (trailing), "%l" (trailing size prefix), "%qd" (q is not a size prefix on MS CRT)
- *        yields return -1 and exactly one invalid-parameter-handler call.
+ * note:  Observed on Windows 10 22H2: the non-secure __stdio_common_vsprintf (options 0) does not validate these formats and calls no handler:
+ *        "abc%" -> 3 ("abc"), "abc%l" -> 3 ("abc"), "%qd" -> 2 ("qd", q is not a size prefix and the unknown conversion text is copied literally).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -27,24 +27,24 @@ TC_CASE(trailing_percent)
     char b[32]; const char * volatile f = "abc%"; int r;
     tc_iph_count = 0;
     r = cv(b, sizeof b, f);
-    CHECK_EQ_I(r, -1);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 3);
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(trailing_l)
 {
     char b[32]; const char * volatile f = "abc%l"; int r;
     tc_iph_count = 0;
     r = cv(b, sizeof b, f, 1);
-    CHECK_EQ_I(r, -1);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 3);
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(q_prefix)
 {
     char b[32]; const char * volatile f = "%qd"; int r;
     tc_iph_count = 0;
     r = cv(b, sizeof b, f, 1);
-    CHECK_EQ_I(r, -1);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 2);
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 int main(void)
 {

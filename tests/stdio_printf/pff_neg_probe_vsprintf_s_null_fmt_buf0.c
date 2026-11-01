@@ -5,11 +5,13 @@
  * funcs: vsprintf_s _vsnprintf_s vswprintf_s swprintf_s
  * crt:   ucrtbase
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs vsprintf_s: the *_s functions write an empty string to a valid buffer on failure
  * note:  PROBES: with a valid buffer (size 16) and a NULL format, after the failing *_s call buf[0]==0 (empty string stored).
  *        Return/errno/IPH for these are asserted in pff_neg_vsprintf_s_null_args.
  *        Also probes that swprintf_s with a zero buffer size fails (-1, IPH) without touching the buffer.
+ *        Win10 22H2 (observed): a NULL format returns -1 and leaves the buffer UNTOUCHED (b[0] stays 'x'); the previous expectation b[0]==0 was a guess.
+ *        Raw evidence: b[0] == 0 got=120 want=0 (all four cases).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -29,28 +31,28 @@ TC_CASE(vsprintf_s_buf0)
     char b[16]; const char * volatile nf = NULL; int r;
     memset(b, 'x', sizeof b);
     r = c_vs(b, 16, nf, 1.0);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(b[0], 0);
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(b[0], 'x');
 }
 TC_CASE(vsnprintf_s_buf0)
 {
     char b[16]; const char * volatile nf = NULL; int r;
     memset(b, 'x', sizeof b);
     r = c_vsn(b, 16, _TRUNCATE, nf, 1.0);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(b[0], 0);
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(b[0], 'x');
 }
 TC_CASE(vswprintf_s_buf0)
 {
     wchar_t b[16]; const wchar_t * volatile nf = NULL; int r, i;
     for (i = 0; i < 16; i++) b[i] = L'x';
     r = c_vsw(b, 16, nf, 1.0);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(b[0], 0);
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(b[0], 'x');
 }
 TC_CASE(swprintf_s_null_fmt_buf0)
 {
     wchar_t b[10]; const wchar_t * volatile nf = NULL; int r, i;
     for (i = 0; i < 10; i++) b[i] = L'x';
     r = swprintf_s(b, 10, nf);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(b[0], 0);
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(b[0], 'x');
 }
 TC_CASE(swprintf_s_size0)
 {

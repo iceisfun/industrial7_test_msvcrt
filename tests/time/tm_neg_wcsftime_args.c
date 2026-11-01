@@ -7,6 +7,7 @@
  * kind:  negative
  * conf:  documented
  * ref:   MS docs wcsftime (parameter validation)
+ * note:  bad_mon: handler count is 2 on Win10 19045 ucrtbase (tm_mon=12), 1 for the NULL/bad-specifier cases.
  */
 #include "tc.h"
 #include <time.h>
@@ -23,12 +24,19 @@ static void mk(struct tm *t, int Y, int Mo, int D, int h, int m, int s, int wd, 
 static wchar_t buf[32];
 static volatile size_t v_sz;
 static struct tm T;
-static void inv(size_t r) { CHECK_EQ_U(r, 0); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1); }
+static void invn(size_t r, int n) { CHECK_EQ_U(r, 0); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, n); }
+static void inv(size_t r) { invn(r, 1); }
+/* observed on Win10 ucrtbase: an invalid tm field calls the handler twice per wcsftime call */
+#if TC_CRT_VER >= 140
+#define IPH_TM 2
+#else
+#define IPH_TM 1
+#endif
 TC_CASE(null_buf) { mk(&T, 2020, 6, 15, 12, 0, 0, 1, 166, 0); errno = 0; tc_iph_count = 0; v_sz = 10; inv(wcsftime(NULL, v_sz, L"%Y", &T)); }
 TC_CASE(null_fmt) { mk(&T, 2020, 6, 15, 12, 0, 0, 1, 166, 0); errno = 0; tc_iph_count = 0; v_sz = 32; inv(wcsftime(buf, v_sz, NULL, &T)); }
 TC_CASE(null_tm) { errno = 0; tc_iph_count = 0; v_sz = 32; inv(wcsftime(buf, v_sz, L"%Y", NULL)); }
 TC_CASE(zero_size) { mk(&T, 2020, 6, 15, 12, 0, 0, 1, 166, 0); v_sz = 0; CHECK_EQ_U(wcsftime(buf, v_sz, L"%Y", &T), 0); }
 TC_CASE(too_small) { mk(&T, 2020, 6, 15, 12, 0, 0, 1, 166, 0); v_sz = 4; CHECK_EQ_U(wcsftime(buf, v_sz, L"%Y", &T), 0); }
 TC_CASE(bad_spec) { mk(&T, 2020, 6, 15, 12, 0, 0, 1, 166, 0); errno = 0; tc_iph_count = 0; v_sz = 32; inv(wcsftime(buf, v_sz, L"%Q", &T)); }
-TC_CASE(bad_mon) { mk(&T, 2020, 6, 15, 12, 0, 0, 1, 166, 0); T.tm_mon = 12; errno = 0; tc_iph_count = 0; v_sz = 32; inv(wcsftime(buf, v_sz, L"%b", &T)); }
+TC_CASE(bad_mon) { mk(&T, 2020, 6, 15, 12, 0, 0, 1, 166, 0); T.tm_mon = 12; errno = 0; tc_iph_count = 0; v_sz = 32; invn(wcsftime(buf, v_sz, L"%b", &T), IPH_TM); }
 int main(void) { tc_begin(); CHECK(tc_iph_install()); TC_RUN(null_buf); TC_RUN(null_fmt); TC_RUN(null_tm); TC_RUN(zero_size); TC_RUN(too_small); TC_RUN(bad_spec); TC_RUN(bad_mon); return tc_end(); }

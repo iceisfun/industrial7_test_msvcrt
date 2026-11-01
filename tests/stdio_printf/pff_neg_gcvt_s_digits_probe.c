@@ -5,12 +5,10 @@
  * funcs: _gcvt_s
  * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _gcvt_s (EINVAL for NULL buffer / size 0; buffer-too-small error)
- * note:  PROBES the digits argument edge cases of _gcvt_s, which the docs do not spell out: digits < 0, digits == 0,
- *        digits >= buffer size. Guesses: digits=-1 -> EINVAL with IPH 1 and buf[0]==0; digits >= size (10,10 and 5,5)
- *        -> EINVAL or ERANGE with buf[0]==0 and IPH 1; digits==0 -> not a crash, r is 0 or EINVAL. Canary after the
- *        buffer must be intact in all cases.
+ * note:  Observed on Windows 10 22H2: _gcvt_s(buf,10,1.5,-1) returns ERANGE (34), not EINVAL, with the handler called once, buf[0]==0 and the
+ *        canary intact. digits==0 and digits>=size cases behave as probed (EINVAL/ERANGE accepted, handler 1, buf[0]==0).
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -24,7 +22,7 @@ TC_CASE(digits_negative)
 {
     struct tb t; volatile double v = 1.5; errno_t r; arm(&t); tc_iph_count = 0;
     r = _gcvt_s(t.b, 10, v, -1);
-    CHECK_EQ_I(r, EINVAL); CHECK_EQ_I(tc_iph_count, 1); CHECK_EQ_I(t.b[0], 0); CHECK(canary_ok(&t));
+    CHECK_EQ_I(r, ERANGE); CHECK_EQ_I(tc_iph_count, 1); CHECK_EQ_I(t.b[0], 0); CHECK(canary_ok(&t));
 }
 TC_CASE(digits_zero)
 {

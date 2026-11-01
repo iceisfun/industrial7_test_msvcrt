@@ -5,9 +5,11 @@
  * crt:   >=80
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _locking (EBADF invalid file descriptor; EINVAL invalid argument given for mode); Parameter validation
- * note:  Negative nbytes is probed in io_neg_locking_negbytes_probe; unlocking a never-locked region in io_neg_locking_unlock_probe. Invalid-handler count is asserted only for the bad fd.
+ * note:  OBSERVED on Win10 22H2 ucrtbase: _locking(fd, 99, 10) on a fresh empty file returns 0 with errno 0 and no handler call
+ *        (MS docs list EINVAL for an invalid mode; Windows does not validate it on this path). Bad fd (-1) is still EBADF with
+ *        one handler call. Negative nbytes: io_neg_locking_negbytes_probe.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -30,8 +32,8 @@ TC_CASE(bad_mode)
     CHECK(tc_iph_install());
     errno = 0;
     r = _locking(fd, mode, 10);
-    CHECK_EQ_I(r, -1);
-    CHECK_EQ_I(errno, EINVAL);
+    CHECK_EQ_I(r, 0);          /* observed: mode 99 is NOT rejected */
+    CHECK_EQ_I(errno, 0);
     if (fd >= 0) _close(fd);
     DeleteFileA(fn);
 }

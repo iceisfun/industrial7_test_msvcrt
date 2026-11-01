@@ -24,6 +24,7 @@ int main(void)
     const char *n;
     tc_begin();
     if ((n = tc_child_name()) != NULL) {
+        tc_iph_default();
         v_fd = n[0] == 'b' ? 100000 : -1;
         _close(v_fd);
         return 77;

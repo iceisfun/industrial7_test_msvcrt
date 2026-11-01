@@ -8,7 +8,7 @@
  * conf:  probe
  * ref:   MS docs swprintf, _snwprintf, snprintf (UCRT; "if buffer is NULL and count is zero, returns the length")
  * note:  PROBES (each case independent): (1) swprintf(NULL,5,L"x") returns -1, EINVAL, handler called once; (2) swprintf(buf,0,L"x") returns -1
- *        (handler/EINVAL not asserted) and leaves buf untouched; (3) legacy _snwprintf(NULL,0,L"abc") returns -1 (documented _snprintf rule: len > count gives -1; only C99 snprintf returns the length);
+ *        (handler/EINVAL not asserted) and leaves buf untouched; (3) OBSERVED Win10 22H2 19045: legacy _snwprintf(NULL,0,L"abc") returns 3, the needed length (old guess -1 was wrong);
  *        (4) swprintf(buf,5,NULL) returns -1, EINVAL, handler once.
  */
 #include "tc.h"
@@ -24,7 +24,7 @@ TC_CASE(swprintf_null_buffer) { const wchar_t * volatile f = L"x"; int n; tc_iph
 TC_CASE(swprintf_zero_count) { wchar_t b[8]; const wchar_t * volatile f = L"x"; int n; b[0] = L'Q'; n = swprintf(b, 0, f);
     CHECK_EQ_I(n, -1); CHECK_EQ_I(b[0], L'Q'); }
 TC_CASE(snwprintf_count_only) { const wchar_t * volatile f = L"abc"; int n; tc_iph_count = 0; n = _snwprintf(v_null_buf, 0, f);
-    CHECK_EQ_I(n, -1); }
+    CHECK_EQ_I(n, 3); CHECK_EQ_I(tc_iph_count, 0); }
 TC_CASE(swprintf_null_format) { wchar_t b[8]; int n; b[0] = L'Q'; tc_iph_count = 0; errno = 0; n = swprintf(b, 5, v_null_fmt);
     CHECK_EQ_I(n, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1); }
 int main(void)

@@ -33,7 +33,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) {
+    if ((c = tc_child_name()) != NULL) { tc_iph_default();
         _locale_t l = _create_locale(LC_ALL, "C");
         if (l == NULL) return 78;
         if (c[0] == 'u' && c[4] == '_') (void)strtoumax(nul, NULL, 10);

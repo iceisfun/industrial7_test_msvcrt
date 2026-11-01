@@ -6,8 +6,10 @@
  * procs: _splitpath_s _wsplitpath_s _set_invalid_parameter_handler
  * crt:   >=80
  * tier:  p0
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _splitpath_s (error conditions table: buffer too small -> ERANGE, invalid parameter handler invoked)
+ * note:  MS docs _splitpath_s error table says ERANGE with the invalid parameter handler; OBSERVED on Win10 22H2 ucrtbase:
+ *        every too-small-buffer case returns ERANGE but the handler is NOT invoked, so the handler count assertion is now 0.
  */
 #include "tc.h"
 #include <errno.h>
@@ -20,7 +22,7 @@ static const char *vs(const char *s) { static volatile const char *v; v = s; ret
 static void fill(char *d, char *di, char *f, char *e)
 { d[0] = 'X'; d[1] = 0; di[0] = 'X'; di[1] = 0; f[0] = 'X'; f[1] = 0; e[0] = 'X'; e[1] = 0; }
 
-/* run with given sizes; assert ERANGE and iph==1 (buffer state is probed in dir_neg_probe_splitpath_s_reset) */
+/* run with given sizes; assert ERANGE and iph==0 (observed on Win10 22H2: ERANGE without a handler call, unlike the MS docs table) (buffer state is probed in dir_neg_probe_splitpath_s_reset) */
 static void run(const char *path, size_t ds, size_t dis, size_t fs, size_t es)
 {
     char d[_MAX_DRIVE], di[_MAX_DIR], f[_MAX_FNAME], e[_MAX_EXT];
@@ -29,7 +31,7 @@ static void run(const char *path, size_t ds, size_t dis, size_t fs, size_t es)
     tc_iph_count = 0; errno = 0;
     r = sp(vs(path), d, ds, di, dis, f, fs, e, es);
     CHECK_EQ_I(r, ERANGE);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(fname_small) { if (!sp) TC_SKIP("n/a"); run("abcdef", _MAX_DRIVE, _MAX_DIR, 3, _MAX_EXT); }
 TC_CASE(drive_small) { if (!sp) TC_SKIP("n/a"); run("C:\\d\\f.e", 2, _MAX_DIR, _MAX_FNAME, _MAX_EXT); }
@@ -43,7 +45,7 @@ TC_CASE(wide_small)
     tc_iph_count = 0; errno = 0;
     r = wsp((const wchar_t *)p, d, _MAX_DRIVE, di, _MAX_DIR, f, 3, e, _MAX_EXT);
     CHECK_EQ_I(r, ERANGE);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 int main(void)
 {

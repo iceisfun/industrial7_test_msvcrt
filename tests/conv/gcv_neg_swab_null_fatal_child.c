@@ -26,7 +26,7 @@ int main(void)
 {
     const char *c; static char b1[4], b2[4];
     tc_begin();
-    if ((c = tc_child_name()) != NULL) {
+    if ((c = tc_child_name()) != NULL) { tc_iph_default();
         if (tc_streq(c, "srcnull")) _swab(NULL, b1, 2);
         else if (tc_streq(c, "dstnull")) _swab(b1, NULL, 2);
         else _swab(b1, b2, -1);

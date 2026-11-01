@@ -5,8 +5,11 @@
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90
  * tier:  p1
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _splitpath_s, _wsplitpath_s
+ * note:  Return values and errno are MS-documented. Handler count over the three calls (NULL path, size-0 buffer, ERANGE fname)
+ *        is 2, not 3: the ERANGE path does not invoke the handler (observed on Win10 22H2 19045 ucrtbase; same as
+ *        sec_neg_splitpath_s_range).
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -26,7 +29,7 @@ TC_CASE(handler_counts)
     _wsplitpath_s(NULL, d, 8, NULL, 0, NULL, 0, NULL, 0);
     _wsplitpath_s(v_path, d, v_zero, NULL, 0, NULL, 0, NULL, 0);
     _wsplitpath_s(v_path, dr, 8, di, 16, fn, 4, ex, 16);
-    CHECK_EQ_I(tc_iph_count, 3);
+    CHECK_EQ_I(tc_iph_count, 2);   /* NULL path + size 0 call the handler; the ERANGE call does not (observed) */
 }
 int main(void)
 {

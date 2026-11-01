@@ -5,19 +5,20 @@
  * crt:   >=140
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf format specification (incomplete specification -> invalid parameter)
- * note:  PROBE: sprintf("abc%") and _snprintf(b, n, "x%") on ucrtbase return -1 with EINVAL and one invalid-parameter call (the format validation is
- *        shared with the _s variants). Buffer contents are not asserted.
+ * note:  OBSERVED: sprintf("abc%") and _snprintf(b, n, "x%") on ucrtbase return 3 / 1 (text kept), errno 0, no invalid-parameter call (no format validation in the non-_s variants).
+ *        Observed on Win10 22H2 19045 ucrtbase: the non-_s printf family does not validate format strings (no handler call, no errno); the bad conversion char is copied through.
  */
 #include "tc.h"
 #include <stdio.h>
 #include <errno.h>
 
-TC_CASE(sprintf_abc) { char b[32]; int r; const char * volatile f = "abc%"; tc_iph_count = 0; errno = 0; r = sprintf(b, f);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1); }
-TC_CASE(snprintf_x)  { char b[32]; int r; const char * volatile f = "x%"; tc_iph_count = 0; errno = 0; r = _snprintf(b, sizeof b, f);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1); }
+static char g_b[32];
+TC_CASE(sprintf_abc) { char *b = g_b; int r; const char * volatile f = "abc%"; tc_iph_count = 0; errno = 0; r = sprintf(b, f);
+    CHECK_EQ_I(r, 3); CHECK_STR(g_b, "abc"); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0); }
+TC_CASE(snprintf_x)  { char *b = g_b; int r; const char * volatile f = "x%"; tc_iph_count = 0; errno = 0; r = _snprintf(b, sizeof b, f);
+    CHECK_EQ_I(r, 1); CHECK_STR(g_b, "x"); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0); }
 int main(void)
 {
     tc_begin();

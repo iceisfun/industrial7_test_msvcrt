@@ -10,6 +10,7 @@
  * ref:   MS docs _localtime32_s, _localtime64_s; "Parameter validation"
  * note:  Documented: NULL arguments invoke the invalid parameter handler, which by default terminates the process.
  *        Probed: the exact termination status is a fast-fail (0xC0000409). Children are separate processes.
+ *        Children call tc_iph_default(): the mingw startup code installs a no-op invalid-parameter handler, which hid the CRT default.
  */
 #include "tc.h"
 #include <time.h>
@@ -35,6 +36,7 @@ int main(void)
     tc_begin();
     TC_LOAD_PROC(_localtime64_s); TC_LOAD_PROC(_localtime32_s);
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();  /* mingw startup installs a no-op handler; restore the CRT default (fast-fail) */
         struct tm t; __time64_t t64 = 0; __time32_t t32 = 0;
         if (!tc_p__localtime64_s || !tc_p__localtime32_s) return 78;
         if (!lstrcmpA(c, "nulltm")) tc_p__localtime64_s(NULL, &t64);

@@ -5,9 +5,10 @@
  * funcs: ungetc fputc fopen
  * crt:   all
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.21.5.3 (input after output requires intervening flush/seek)
  * note:  PROBE: r+ stream, fputc then ungetc without an intervening seek/flush. Expected EOF.
+ *        OBSERVED (Win10 22H2, class A): ungetc('Z') after fputc on r+b is accepted (returns 90) and fgetc returns 'Z' (raw: ungetc('Z', f) == EOF got=90).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -33,7 +34,8 @@ TC_CASE(after_write)
     FILE *f; put(F, "abc", 3);
     f = fopen(F, "r+b"); CHECK(f != NULL); if (!f) { del(F); return; }
     CHECK_EQ_I(fputc('Q', f), 'Q');
-    CHECK_EQ_I(ungetc('Z', f), EOF);
+    CHECK_EQ_I(ungetc('Z', f), 'Z');   /* observed: accepted */
+    CHECK_EQ_I(fgetc(f), 'Z');
     fclose(f); del(F);
 }
 int main(void) { tc_begin(); TC_RUN(after_write); return tc_end(); }

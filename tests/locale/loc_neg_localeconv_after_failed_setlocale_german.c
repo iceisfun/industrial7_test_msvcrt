@@ -7,12 +7,17 @@
  * kind:  negative
  * conf:  documented
  * ref:   MS docs setlocale ("If the selection cannot be honored, returns NULL and the current locale settings of the program are not changed"); localeconv
+ * note:  Win10 triage (class A): "zz" is NOT an invalid locale name on Windows 10 19045 (setlocale(LC_ALL,"zz") returns "zz": any well-formed BCP-47-style
+ *        tag is accepted as a custom locale), so the failing name is now "zz_nowhere" (observed NULL). Observed on Windows 10 22H2 build 19045.
  * note:  A failing setlocale must leave the lconv data of the last successfully set locale untouched. German case skipped if not installed.
+ *        [scope] observed on ucrtbase 19045 only; the legacy CRTs listed in crt: are [unverified] until the P3 runs.
+ *        [env] user-default locale en-US, build 19045; not stable on a VM with another user locale/NLS data.
+ *        [env] the name "zz" is a valid locale name on build 19045 (observed); "zz_nowhere" is rejected (observed).
  */
 #include "tc.h"
 #include <locale.h>
 
-static const char *volatile v_bad = "zz";
+static const char *volatile v_bad = "zz_nowhere";
 static const char *volatile v_bad_all = "English_Nowhere.1252";
 static const char *volatile v_de = "German_Germany.1252";
 

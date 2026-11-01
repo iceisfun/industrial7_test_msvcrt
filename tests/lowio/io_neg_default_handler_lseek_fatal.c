@@ -26,7 +26,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
-        volatile int bad = -1;
+        volatile int bad = -1; tc_iph_default();
         _lseek(bad, 0, 0);
         return 77;
     }

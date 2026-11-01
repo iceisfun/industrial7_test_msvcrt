@@ -5,10 +5,13 @@
  * funcs: sscanf_s
  * crt:   >=90
  * tier:  p0
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs scanf_s: the size argument bounds the write; with a handler installed execution continues without overflow
  * note:  Buffer contents after failure (empty string) are probed in scn_neg_sscanf_s_too_small_ret_probe.
  *        The buffer ends exactly at a PAGE_NOACCESS page, so any write past size faults (test fails by crash).
+ *        CORRECTED for Win10 22H2 ucrtbase (observed 2026-10-31): a too-small _s destination does NOT call the invalid parameter handler (tc_iph_count stays 0);
+ *        the sentinel/overflow checks below still hold. MS docs do not document a handler call for this case. Stable (2 runs).
+ *        Observed on Win10 22H2 ucrtbase only; the same expectation on the other CRTs (>=90) is [unverified] and must be confirmed when those CRTs are run in the VM.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -26,7 +29,7 @@ TC_CASE(guard_page)
     CHECK(tc_iph_install()); tc_iph_count = 0; vin = "abcdefghijklmnop";
     (void)sscanf_s((const char *)vin, "%s", buf, (unsigned)4);
     v = buf;
-    CHECK(tc_iph_count >= 1);
+    CHECK_EQ_I(tc_iph_count, 0);
     VirtualFree(base, 0, MEM_RELEASE);
 }
 TC_CASE(stack_sentinel)

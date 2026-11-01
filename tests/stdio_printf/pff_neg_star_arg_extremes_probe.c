@@ -5,12 +5,13 @@
  * funcs: snprintf
  * crt:   ucrtbase
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.21.6.1 p5 (negative * width = '-' flag with positive width)
- * note:  PROBES: width taken from an int argument equal to INT_MIN, whose negation is not representable. The standard does
- *        not define this; the guess is that the CRT does not crash, writes nothing past the 64-byte count and either
- *        prints "1.000000" (width ignored) with return 8 or fails with -1. Asserted: no overrun, and r is 8 or -1; if 8,
- *        the text is "1.000000". snprintf (bounded) is used so a huge width cannot overflow the buffer.
+ * note:  OBSERVED (Win10 22H2 x64 (19045) ucrtbase.dll observed, zzp_probe2: "star int_min %*f: r=-2147483648 errno=0 iph=0"): snprintf with a width taken from an int
+ *        argument equal to INT_MIN (negation not representable) does not crash, does not call the invalid-parameter handler and returns
+ *        INT_MIN itself (the computed padded length wraps). The old guess (8 or -1) was wrong. The C standard does not define this
+ *        (negative width = - flag + abs; abs(INT_MIN) overflows -> UB) so this is implementation behaviour, kept as a probe-grade
+ *        observation. Asserted: no write past the 64-byte count (canary) and r == INT_MIN. Stable (no env dependence).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -24,14 +25,12 @@ TC_CASE(width_int_min)
 {
     struct tb t; volatile int w = INT_MIN; int r; arm(&t);
     r = snprintf(t.b, 64, "%*f", w, 1.0);
-    CHECK(canary_ok(&t)); CHECK(r == 8 || r == -1);
-    if (r == 8) CHECK_STR(t.b, "1.000000");
+    CHECK(canary_ok(&t)); CHECK_EQ_I(r, INT_MIN);
 }
 TC_CASE(width_int_min_leftflag)
 {
     struct tb t; volatile int w = INT_MIN; int r; arm(&t);
     r = snprintf(t.b, 64, "%-*.2f", w, 1.0);
-    CHECK(canary_ok(&t)); CHECK(r == 4 || r == -1);
-    if (r == 4) CHECK_STR(t.b, "1.00");
+    CHECK(canary_ok(&t)); CHECK_EQ_I(r, INT_MIN);
 }
 int main(void) { tc_begin(); tc_iph_install(); TC_RUN(width_int_min); TC_RUN(width_int_min_leftflag); return tc_end(); }

@@ -25,7 +25,7 @@ TC_CASE(default_fatal) { DWORD c = 0; CHECK(tc_spawn_self("direct", &c, 20000));
 int main(void)
 {
     tc_begin();
-    if (tc_child_name()) { _invalid_parameter_noinfo(); return 77; }
+    if (tc_child_name()) { tc_iph_default(); _invalid_parameter_noinfo(); return 77; }
     TC_RUN(counting); TC_RUN(default_fatal);
     return tc_end();
 }

@@ -6,10 +6,13 @@
  * crt:   >=90
  * tier:  p2
  * kind:  positive
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _tzset
  * note:  PROBES how many characters of a zone name are kept: believed full name ("ABCDE") on ucrtbase,
  *        truncated to 3 characters ("ABC") on the older CRTs. Nothing is documented.
+ *        OBSERVED (Win10 22H2 19045 oracle93[34])?#934 integration full run crt-triage-triage-r1 and the baseline): ucrtbase ALSO keeps 3 characters, _get_tzname(.., 0) gives "ABC" for
+ *        TZ=ABCDE5 (consistent with MS docs _tzset: "tzn: three-letter time-zone name"). Class A: the earlier ">=140 -> ABCDE" gate
+ *        was not observed (it never ran: TC_UCRT was undefined in the baseline build).
  */
 #include "tc.h"
 #include <time.h>
@@ -25,11 +28,7 @@ TC_CASE(long_std_name)
     buf[0] = 0;
     r = tc_p__get_tzname(&sz, buf, sizeof buf, 0);
     CHECK_EQ_I(r, 0);
-#ifdef TC_UCRT
-    CHECK_STR(buf, "ABCDE");
-#else
-    CHECK_STR(buf, "ABC");
-#endif
+    CHECK_STR(buf, "ABC");   /* ucrtbase observed on Win10 22H2; older CRTs: original expectation (not run on Windows) */
 }
 int main(void)
 {

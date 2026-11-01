@@ -40,6 +40,7 @@ int main(void)
             r = sprintf(b, "ab%n", pn);
             return (r == -1 && tc_iph_count == 1) ? 55 : 56;
         }
+        tc_iph_default();
         sprintf(b, "ab%n", pn);
         return 77;
     }

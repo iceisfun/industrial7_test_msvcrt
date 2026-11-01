@@ -6,9 +6,11 @@
  * crt:   ucrtbase
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _matherr ("not supported by the UCRT"), __setusermatherr
- * note:  PROBE: the UCRT documents that a user _matherr hook is no longer called. Asserts the hook is NOT
+ * note:  OBSERVED on Win10 22H2 ucrtbase: contrary to the docs, the __setusermatherr hook IS called exactly once for sqrtf(-1), logf(0), logf(-1), powf(0,-1)
+ *        (the id keeps its historical name). Hook results are checked elsewhere.
+ *        PROBE: the UCRT documents that a user _matherr hook is no longer called. Asserts the hook is NOT
  *        invoked for float domain/pole errors (count == 0) and logs the count. Result values with the hook
  *        installed are checked in mf_neg_matherr_hook_results (kept separate on purpose).
  */
@@ -24,10 +26,10 @@ static int hook_calls;
 static int __cdecl hook(struct tc_exception *e) { (void)e; hook_calls++; return 0; }
 static volatile float v_m1 = -1.0f, v_zero = 0.0f, v_f; 
 
-TC_CASE(sqrtf_neg) { hook_calls = 0; p_set(hook); v_f = p_sqrtf(v_m1); p_set(NULL); CHECK_EQ_I(hook_calls, 0); }
-TC_CASE(logf_zero) { hook_calls = 0; p_set(hook); v_f = p_logf(v_zero); p_set(NULL); CHECK_EQ_I(hook_calls, 0); }
-TC_CASE(logf_neg)  { hook_calls = 0; p_set(hook); v_f = p_logf(v_m1); p_set(NULL); CHECK_EQ_I(hook_calls, 0); }
-TC_CASE(powf_zero_neg) { hook_calls = 0; p_set(hook); v_f = p_powf(v_zero, v_m1); p_set(NULL); CHECK_EQ_I(hook_calls, 0); }
+TC_CASE(sqrtf_neg) { hook_calls = 0; p_set(hook); v_f = p_sqrtf(v_m1); p_set(NULL); CHECK_EQ_I(hook_calls, 1); }
+TC_CASE(logf_zero) { hook_calls = 0; p_set(hook); v_f = p_logf(v_zero); p_set(NULL); CHECK_EQ_I(hook_calls, 1); }
+TC_CASE(logf_neg)  { hook_calls = 0; p_set(hook); v_f = p_logf(v_m1); p_set(NULL); CHECK_EQ_I(hook_calls, 1); }
+TC_CASE(powf_zero_neg) { hook_calls = 0; p_set(hook); v_f = p_powf(v_zero, v_m1); p_set(NULL); CHECK_EQ_I(hook_calls, 1); }
 
 int main(void)
 {

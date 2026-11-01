@@ -25,6 +25,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
+    if (tc_child_name()) tc_iph_default();
     if ((c = tc_child_name()) != NULL) {
         FILE *volatile f = fopen("tc_fio_neg_fwrite_dh.tmp", "w+b"); FILE *volatile n = NULL; char buf[4] = "x";
         void *volatile nb = NULL;

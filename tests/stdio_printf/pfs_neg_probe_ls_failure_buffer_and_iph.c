@@ -5,9 +5,12 @@
  * crt:   ucrtbase
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   UCRT: conversion failure -> errno EILSEQ, return -1
- * note:  PROBE: (1) an unconvertible %ls (U+20AC in the C locale) does NOT call the invalid parameter handler; (2) sprintf_s clears buffer[0] on that failure; (3) _scprintf fails with EILSEQ too. All three are from memory of the UCRT implementation.
+ * note:  OBSERVED for case scprintf_fails (Win10 22H2 x64 (19045) ucrtbase.dll observed, raw: "scprintf_fails n == -1 got=1"; zzp_probe2 "_scprintf x%lc euro: r=1 errno=42 iph=0", "_scprintf x%ls
+ *        euro: r=-1 errno=42"): _scprintf("x%lc", 0x20ac) in the C locale sets EILSEQ but returns 1 (the count of what was formatted before the
+ *        failing %lc), while %ls with the same character returns -1/EILSEQ. Cases sprintf_no_handler and sprintf_s_clears (unconvertible %ls: -1,
+ *        EILSEQ, no handler, buf[0]=0) were right and pass. Stable (C locale).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -36,7 +39,7 @@ TC_CASE(scprintf_fails)
 {
     int n; errno = 0;
     n = _scprintf(f_x_lc, (wint_t)euro);
-    CHECK_EQ_I(n, -1); CHECK_EQ_I(errno, EILSEQ);
+    CHECK_EQ_I(n, 1); CHECK_EQ_I(errno, EILSEQ);
 }
 int main(void)
 {

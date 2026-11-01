@@ -5,11 +5,11 @@
  * funcs: _splitpath _wsplitpath _splitpath_s
  * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _splitpath_s (ERANGE when a component does not fit its buffer)
- * note:  Probes _splitpath_s with components longer than _MAX_FNAME/_MAX_DIR using full-size (_MAX_*) buffers:
- *        expects ERANGE, one invalid-parameter call, and (probe) all output buffers reset to empty strings.
- *        Controls: empty path and ".gitignore" (no fname, ext is the whole name).
+ * note:  Probes _splitpath_s with components longer than _MAX_FNAME/_MAX_DIR using full-size (_MAX_*) buffers: ERANGE and all
+ *        output buffers reset to empty strings. OBSERVED on Win10 22H2 ucrtbase: the invalid-parameter handler is NOT called
+ *        (old expectation: one call). Controls: empty path and ".gitignore".
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -28,7 +28,7 @@ TC_CASE(long_fname)
     p[265] = '.'; p[266] = 'e'; p[267] = 0;
     fillall(d, di, f, e); tc_iph_count = 0;
     r = _splitpath_s(vs(p), d, _MAX_DRIVE, di, _MAX_DIR, f, _MAX_FNAME, e, _MAX_EXT);
-    CHECK_EQ_I(r, ERANGE); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, ERANGE); CHECK_EQ_I(tc_iph_count, 0);
     CHECK_STR(d, ""); CHECK_STR(di, ""); CHECK_STR(f, ""); CHECK_STR(e, "");
 }
 TC_CASE(long_dir)
@@ -39,7 +39,7 @@ TC_CASE(long_dir)
     p[301] = '\\'; p[302] = 'f'; p[303] = '.'; p[304] = 'e'; p[305] = 0;
     fillall(d, di, f, e); tc_iph_count = 0;
     r = _splitpath_s(vs(p), d, _MAX_DRIVE, di, _MAX_DIR, f, _MAX_FNAME, e, _MAX_EXT);
-    CHECK_EQ_I(r, ERANGE); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, ERANGE); CHECK_EQ_I(tc_iph_count, 0);
     CHECK_STR(di, "");
 }
 TC_CASE(empty_control)

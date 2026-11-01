@@ -22,7 +22,7 @@ TC_CASE(child_terminates)
 int main(void)
 {
     tc_begin();
-    if (tc_child_name() != NULL) { _spawnl(_P_WAIT, NULL, "x", NULL); return 77; }
+    if (tc_child_name() != NULL) { tc_iph_default(); _spawnl(_P_WAIT, NULL, "x", NULL); return 77; }
     TC_RUN(child_terminates);
     return tc_end();
 }

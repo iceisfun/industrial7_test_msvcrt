@@ -5,9 +5,11 @@
  * funcs: fopen fclose fread fwrite ferror
  * crt:   all
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.21.5.3 (read from write-only / write to read-only stream is not supported); MS docs fread/fwrite
  * note:  Probes the exact failure signature of I/O in the wrong direction: count 0, ferror set (cases fread_on_write_only/fwrite_on_read_only), and separately errno EBADF (cases *_errno); also that the file is left unchanged.
+ *        TRIAGE win1093[34])?#934, class A): case fread_errno: errno stays 0 after fread on a write-only stream on ucrtbase 10.0.19045 (observed got=0);
+ *        case fwrite_errno still sees EBADF. EBADF kept for non-UCRT in fread_errno (unverified).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -55,7 +57,13 @@ TC_CASE(fwrite_on_read_only)
 TC_CASE(fread_errno)
 {
     char b[4]; FILE *f = fopen(F, "w"); CHECK(f != NULL);
-    if (f) { errno = 0; fread(b, 1, 4, f); CHECK_EQ_I(errno, EBADF); fclose(f); }
+    if (f) { errno = 0; fread(b, 1, 4, f);
+#if TC_AT_LEAST(140)
+        CHECK_EQ_I(errno, 0);              /* observed ucrtbase 10.0.19045: errno untouched by fread on a write-only stream */
+#else
+        CHECK_EQ_I(errno, EBADF);
+#endif
+        fclose(f); }
     del(F);
 }
 TC_CASE(fwrite_errno)

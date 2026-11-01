@@ -18,7 +18,7 @@ typedef th_t (__cdecl *setth_t)(th_t);
 #define N_TERM "terminate"
 #define N_SETD "?set_terminate@@YAP6AXXZP6AXXZ@Z"
 #define N_TERMD "?terminate@@YAXXZ"
-#ifdef TC_UCRT
+#if TC_CRT_VER >= 140
 #define PICK(a, b) tc_crt_proc(a) ? tc_crt_proc(a) : tc_crt_proc(b)
 #else
 #define PICK(a, b) tc_crt_proc(b)

@@ -5,8 +5,11 @@
  * funcs: ungetc fseek fgetc ftell fopen fgetpos fsetpos rewind
  * crt:   all
  * tier:  p0
- * conf:  standard
+ * conf:  observed
  * ref:   C11 7.21.7.10 (pushed-back characters discarded by file positioning); MS docs ungetc
+ * note:  deviates from C11 7.21.9.2p5 / 7.21.9.3 (TRIAGE win1093[34])?#934, class B): on ucrtbase 10.0.19045 fseek(f,0,SEEK_SET) and fsetpos after ungetc('Z') do not
+ *        discard the pushed-back char (ungetc overwrote the buffered 'A'; the seek stays inside the buffer): fgetc returns 'Z' (got=90) and the next 'B'. ftell is 0 as the
+ *        standard requires. rewind() does discard (case unchanged).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -35,7 +38,11 @@ TC_CASE(fseek_discards)
     CHECK_EQ_I(ungetc('Z', f), 'Z');
     CHECK_EQ_I(fseek(f, 0, SEEK_SET), 0);
     CHECK_EQ_I(ftell(f), 0);
+#if TC_AT_LEAST(140)
+    CHECK_EQ_I(fgetc(f), 'Z');     /* deviates from C11 7.21.9.2p5: observed ucrtbase 10.0.19045 (in-buffer seek keeps the pushed byte) */
+#else
     CHECK_EQ_I(fgetc(f), 'A');
+#endif
     CHECK_EQ_I(fgetc(f), 'B');
     fclose(f); del(F);
 }
@@ -55,7 +62,11 @@ TC_CASE(fsetpos_discards)
     CHECK_EQ_I(fgetc(f), 'A');
     CHECK_EQ_I(ungetc('Z', f), 'Z');
     CHECK_EQ_I(fsetpos(f, &p), 0);
+#if TC_AT_LEAST(140)
+    CHECK_EQ_I(fgetc(f), 'Z');     /* deviates from C11 7.21.9.3: observed ucrtbase 10.0.19045 */
+#else
     CHECK_EQ_I(fgetc(f), 'A');
+#endif
     fclose(f); del(F);
 }
 int main(void) { tc_begin(); TC_RUN(fseek_discards); TC_RUN(rewind_discards); TC_RUN(fsetpos_discards); return tc_end(); }

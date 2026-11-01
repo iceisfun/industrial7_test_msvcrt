@@ -47,7 +47,7 @@ TC_CASE(newline_becomes_0D00_0A00)
     unsigned char b[64]; FILE *f = _wfopen(WFN, L"w, ccs=UTF-16LE"); int n;
     CHECK(f != NULL); if (!f) return;
     fwprintf(f, L"a\nb"); fclose(f);
-    n = slurp(b, 64); CHECK_EQ_I(n, 2 + 10);
+    n = slurp(b, 64); CHECK_EQ_I(n, 2 + 8); /* BOM + a CR LF b = 4 wchar_t = 8 bytes (test bug: was 10) */
     CHECK(b[2] == 'a' && b[3] == 0 && b[4] == 0x0D && b[5] == 0 && b[6] == 0x0A && b[7] == 0 && b[8] == 'b' && b[9] == 0);
     DeleteFileA(FN);
 }

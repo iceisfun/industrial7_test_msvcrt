@@ -7,11 +7,14 @@
  * kind:  positive
  * conf:  documented
  * ref:   MS docs _create_locale, _wcreate_locale
- * note:  Invalid wide locale name returns NULL (documented). 0xE9 (e acute) is alpha in a 1252 locale.
+ * note:  Fix (win10 triage): added the missing _wcreate_locale prototype (implicit int truncated the returned pointer -> access violation).
+ *        Invalid wide locale name returns NULL (documented). 0xE9 (e acute) is alpha in a 1252 locale.
  */
 #include "tc.h"
 #include <locale.h>
 #include <ctype.h>
+/* mingw headers do not declare _wcreate_locale; without a prototype the call returns int and the pointer is truncated (build defect) */
+_locale_t __cdecl _wcreate_locale(int, const wchar_t *);
 /* mingw's ctype.h defines these as inline macros; undefine so the DLL's exports are what is called */
 #undef _isalpha_l
 #undef _isupper_l

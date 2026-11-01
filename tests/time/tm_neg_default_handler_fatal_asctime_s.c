@@ -9,6 +9,7 @@
  * ref:   MS docs asctime_s, "Parameter validation"
  * note:  Probes that asctime_s with a too-small buffer (25), NULL buffer, or tm_mon=12 terminates the process under
  *        the default handler (exit code != 0 and != 77). Exact status is not asserted.
+ *        Children call tc_iph_default(): the mingw startup code installs a no-op invalid-parameter handler, which hid the CRT default.
  */
 #include "tc.h"
 #include <time.h>
@@ -30,6 +31,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();  /* mingw startup installs a no-op handler; restore the CRT default (fast-fail) */
         char buf[32]; struct tm t; volatile int sz = 25;
         t.tm_year = 117; t.tm_mon = 0; t.tm_mday = 1; t.tm_hour = t.tm_min = t.tm_sec = 0; t.tm_wday = 0; t.tm_yday = 0; t.tm_isdst = 0;
         if (c[0] == 's') asctime_s(buf, (size_t)sz, &t);

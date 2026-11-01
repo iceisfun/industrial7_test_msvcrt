@@ -3,12 +3,13 @@
  * area:  stdio_printf
  * kind:  negative
  * funcs: fprintf fopen fclose
- * crt:   >=100
+ * crt:   ucrtbase
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf format specification; "Parameter validation"
- * note:  Probing that an unknown conversion character after '%' (%y, %!) is rejected (-1, EINVAL, iph 1) rather than copied literally
- *        (pre-UCRT docs said unknown chars are copied); also that the stream stays usable. A trailing lone '%' is probed separately (pfx_probe_neg_trailing_percent).
+ * note:  Unknown conversion character after '%' (%y, %!). Observed Win10 22H2 ucrtbase: copied literally without the '%' (return 1, errno 0, handler not called), NOT rejected; also that the stream stays usable. A trailing lone '%' is probed separately (pfx_probe_neg_trailing_percent).
+ *        Raw evidence (baseline): percent_y r == -1 got=1 ; errno == EINVAL got=0 ; tc_iph_count == 1 got=0 (same for percent_bang; stream_usable_after r == -1 got=3).
+ *        crt narrowed to ucrtbase: the observed behaviour was measured on Win10 22H2 ucrtbase only (older CRTs [unverified]).
  */
 #include "tc.h"
 #define TC_S_(x) #x
@@ -27,21 +28,21 @@ TC_CASE(percent_y)
 {
     FILE *f = fopen(TMP, "w"); int r; CHECK(f != NULL); if (!f) return;
     tc_iph_count = 0; errno = 0; r = fprintf(f, g_y, 1);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 1); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
     fclose(f); DeleteFileA(TMP);
 }
 TC_CASE(percent_bang)
 {
     FILE *f = fopen(TMP, "w"); int r; CHECK(f != NULL); if (!f) return;
     tc_iph_count = 0; errno = 0; r = fprintf(f, g_bang, 1);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 1); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
     fclose(f); DeleteFileA(TMP);
 }
 TC_CASE(stream_usable_after)
 {
     FILE *f = fopen(TMP, "w"); int r; CHECK(f != NULL); if (!f) return;
-    r = fprintf(f, g_pre, 1);              /* prior output may or may not be emitted; only the failure is asserted */
-    CHECK_EQ_I(r, -1);
+    r = fprintf(f, g_pre, 1);              /* observed: "oky" written (3) */
+    CHECK_EQ_I(r, 3);
     clearerr(f);
     errno = 0;
     r = fprintf(f, "%s", g_ok);

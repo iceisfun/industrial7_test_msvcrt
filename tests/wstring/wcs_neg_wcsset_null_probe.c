@@ -6,10 +6,12 @@
  * crt:   >=80
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _strset, _wcsset, _strnset, _wcsnset (parameter validation, VS2005+)
  * note:  PROBE: _wcsset(NULL,c) and _wcsnset(NULL,c,n>0) return NULL, errno=EINVAL, handler invoked once
  *        (each call in a child process in case the CRT faults instead). The n==0 case is in wcs_neg_wcsnset_null_n0_probe.
+ *        Observed Win10 22H2 ucrtbase: neither call is validated; both fault with 0xC0000005 (installed handler) -- class C: the fault
+ *        is asserted. Stable.
  */
 #include "tc.h"
 #include <errno.h>
@@ -36,7 +38,7 @@ static void run_child(const char *n)
     DWORD code = 0; int ran = tc_spawn_self(n, &code, 20000);
     CHECK(ran);
     if (code == 70) TC_SKIP("not exported");
-    CHECK_EQ_U(code, 0);
+    CHECK_EQ_U(code, TC_STATUS_ACCESS_VIOLATION);   /* observed: no NULL validation */
 }
 TC_CASE(wcsset_null) { run_child("set"); }
 TC_CASE(wcsnset_null_n3) { run_child("nset3"); }

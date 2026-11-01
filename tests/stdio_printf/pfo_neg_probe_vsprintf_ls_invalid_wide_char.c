@@ -5,10 +5,11 @@
  * funcs: __stdio_common_vsprintf __stdio_common_vsprintf_s
  * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf Type field (%lc, %ls convert via wctomb in the current locale); wcrtomb EILSEQ
- * note:  PROBES: in the "C" locale U+4E2D has no single-byte mapping, so %lc / %ls conversion is expected to fail with -1 and EILSEQ;
- *        the secure entry is expected to report it without invoking the invalid-parameter handler.
+ * note:  Observed on Windows 10 22H2, "C" locale, U+4E2D: %ls fails with -1/EILSEQ, but %lc does NOT fail: it emits nothing, sets errno to EILSEQ
+ *        and the call returns 0 (a successful empty result), also through the secure entry (no invalid-parameter handler call). Deviates from
+ *        C11 7.21.6.1p8 (%lc is converted as by wcrtomb) and 7.21.6.1p14 (an encoding error makes the function return a negative value).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -20,11 +21,11 @@ static int c0(unsigned o, char *b, size_t n, const char *f, ...)
 static int cs(char *b, size_t n, const char *f, ...)
 { va_list ap; int r; va_start(ap, f); r = __stdio_common_vsprintf_s(0, b, n, f, NULL, ap); va_end(ap); return r; }
 
-TC_CASE(lc_opt0) { char b[16]; int r; errno = 0; r = c0(0, b, sizeof b, "%lc", (wint_t)0x4E2D); CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EILSEQ); }
+TC_CASE(lc_opt0) { char b[16]; int r; errno = 0; r = c0(0, b, sizeof b, "%lc", (wint_t)0x4E2D); CHECK_EQ_I(r, 0); CHECK_EQ_I(errno, EILSEQ); CHECK_EQ_I(b[0], 0); }
 TC_CASE(ls_opt0) { char b[16]; int r; errno = 0; r = c0(0, b, sizeof b, "%ls", L"a\x4E2D"); CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EILSEQ); }
 TC_CASE(lc_secure) { char b[16]; int r; errno = 0; tc_iph_count = 0; r = cs(b, sizeof b, "%lc", (wint_t)0x4E2D);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EILSEQ); CHECK_EQ_I(tc_iph_count, 0); }
-TC_CASE(lc_legacy_wide_opt) { char b[16]; int r; errno = 0; r = c0(4, b, sizeof b, "%lc", (wint_t)0x4E2D); CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EILSEQ); }
+    CHECK_EQ_I(r, 0); CHECK_EQ_I(errno, EILSEQ); CHECK_EQ_I(tc_iph_count, 0); CHECK_EQ_I(b[0], 0); }
+TC_CASE(lc_legacy_wide_opt) { char b[16]; int r; errno = 0; r = c0(4, b, sizeof b, "%lc", (wint_t)0x4E2D); CHECK_EQ_I(r, 0); CHECK_EQ_I(errno, EILSEQ); CHECK_EQ_I(b[0], 0); }
 int main(void)
 {
     tc_begin();

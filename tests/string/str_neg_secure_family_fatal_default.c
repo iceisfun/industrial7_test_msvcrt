@@ -63,7 +63,7 @@ int main(void)
     TC_LOAD_PROC(strcat_s); TC_LOAD_PROC(strncpy_s); TC_LOAD_PROC(strncat_s); TC_LOAD_PROC(strtok_s);
     TC_LOAD_PROC(_strlwr_s); TC_LOAD_PROC(_strupr_s); TC_LOAD_PROC(_strset_s); TC_LOAD_PROC(_strnset_s);
     if ((c = tc_child_name()) != NULL) {
-        if (c[0] == 'i') tc_iph_install();
+        if (c[0] == 'i') tc_iph_install(); else tc_iph_default();
         trigger(c[1] - '0');
         return 77;
     }

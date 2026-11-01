@@ -9,6 +9,8 @@
  * ref:   none (MS docs do not state errno for wrong-mode stream I/O)
  * note:  Probes: fgetc on a write-only stream and fputc on a read-only stream set errno == EBADF (the CRT maps the failing _read/_write
  *        to EBADF). Most likely value; not documented for these functions.
+ *        TRIAGE win1093[34])?#934, class A): on ucrtbase 10.0.19045 fgetc on a write-only stream returns EOF and leaves errno untouched (0); the fputc_readonly case
+ *        still sees EBADF. The EBADF expectation is kept for the non-UCRT targets (not run in the reference).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -21,7 +23,13 @@
 TC_CASE(fgetc_writeonly)
 {
     FILE *f = fopen(FN, "wb"); CHECK(f != NULL); if (!f) return;
-    errno = 0; CHECK_EQ_I(fgetc(f), EOF); CHECK_EQ_I(errno, EBADF);
+    errno = 0; CHECK_EQ_I(fgetc(f), EOF);
+#if TC_AT_LEAST(140)
+    CHECK_EQ_I(errno, 0);      /* observed ucrtbase 10.0.19045: errno untouched */
+#else
+    CHECK_EQ_I(errno, EBADF);
+#endif
+
     fclose(f); remove(FN);
 }
 TC_CASE(fputc_readonly)

@@ -6,9 +6,11 @@
  * crt:   win10
  * tier:  p2
  * kind:  positive
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _aligned_malloc
  * note:  PROBE: alignment 0 passes the power-of-2 check (0&-1==0) and is bumped to pointer size; size 0 gives a unique non-NULL pointer; offset==size==0 is allowed. All unverified guesses.
+ * note:  OBSERVED (Win10 22H2 19045; raw "p != NULL" failed in align0): _aligned_malloc(100, 0) returns NULL (alignment 0 is rejected). Class A.
+ *        size0 and offset_size_both0 still pass as guessed.
  */
 #include "tc.h"
 #include <malloc.h>
@@ -16,7 +18,7 @@
 #include <stdint.h>
 
 static volatile size_t g_a, g_s;
-TC_CASE(align0) { void *p; g_s = 100; g_a = 0; tc_iph_install(); p = _aligned_malloc(g_s, g_a); CHECK(p != NULL); if (p) _aligned_free(p); }
+TC_CASE(align0) { void *p; g_s = 100; g_a = 0; tc_iph_install(); p = _aligned_malloc(g_s, g_a); CHECK(p == NULL); if (p) _aligned_free(p); }   /* observed Win10 22H2: alignment 0 is rejected */
 TC_CASE(size0)  { void *p; g_s = 0; g_a = 16; p = _aligned_malloc(g_s, g_a); CHECK(p != NULL); if (p) { CHECK_EQ_U((uintptr_t)p % 16, 0); _aligned_free(p); } }
 TC_CASE(offset_size_both0) { void *p; g_s = 0; g_a = 16; p = _aligned_offset_malloc(g_s, g_a, 0); CHECK(p != NULL); if (p) _aligned_free(p); }
 int main(void) { tc_begin(); TC_RUN(align0); TC_RUN(size0); TC_RUN(offset_size_both0); return tc_end(); }

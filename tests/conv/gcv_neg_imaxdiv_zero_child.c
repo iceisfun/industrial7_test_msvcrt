@@ -5,10 +5,12 @@
  * crt:   ucrtbase msvcr120
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   C99 7.8.2.2 (undefined when result not representable)
- * note:  PROBING: imaxdiv(1,0) and imaxdiv(INTMAX_MIN,-1) trap on x64 (idiv). Only asserts the child does not return
- *        normally (exit code != 77); the exact status code is printed as a TC NOTE, not asserted.
+ * note:  OBSERVED (Win10 22H2 19045 ucrtbase, run twice): imaxdiv(1,0) terminates the child with 0xC0000094 (integer divide by zero);
+ *        imaxdiv(INTMAX_MIN,-1) (and lldiv) raises STATUS_INTEGER_OVERFLOW 0xC0000095 (hardware idiv overflow) and the child ends with that code.
+ *        The earlier "hang" was a HARNESS artifact (class F): mingw-w64's _gnu_exception_handler (SetUnhandledExceptionFilter in crtexe) returns
+ *        CONTINUE_EXECUTION for 0xC0000095 so the idiv re-ran forever. The child now calls tc_seh_default() first. Undefined in C (C11 6.5.5p6).
  */
 #include "tc.h"
 #include <inttypes.h>
@@ -19,21 +21,15 @@ static volatile intmax_t n, d;
 static int child_main(const char *name)
 {
     imaxdiv_t r;
+    tc_seh_default();
     if (tc_strequ(name, "div0")) { n = 1; d = 0; }
     else if (tc_strequ(name, "ovf")) { n = INTMAX_MIN; d = -1; }
     else return 13;
     r = imaxdiv(n, d);
     return (int)(r.quot & 0) + 77;
 }
-static void run(const char *name)
-{
-    DWORD code = 0; char b[24]; int ok = tc_spawn_self(name, &code, 20000);
-    tc_hex(code, b); tc_write("TC NOTE " TC_TEST_ID "::"); tc_write(name); tc_write(" exit="); tc_write(b); tc_write("\n");
-    CHECK(ok);
-    CHECK(code != 77);
-}
-TC_CASE(div0) { run("div0"); }
-TC_CASE(ovf) { run("ovf"); }
+TC_CASE(div0) { DWORD code = 0; int ok = tc_spawn_self("div0", &code, 5000); CHECK(ok); CHECK_EQ_U(code, 0xC0000094u); }
+TC_CASE(ovf) { DWORD code = 0; int ok = tc_spawn_self("ovf", &code, 5000); CHECK(ok); CHECK_EQ_U(code, 0xC0000095u); }
 
 int main(void)
 {

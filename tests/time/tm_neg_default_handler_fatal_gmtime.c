@@ -31,6 +31,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();  /* mingw startup installs a no-op handler; restore the CRT default (fast-fail) */
         volatile __time64_t t = 0; struct tm tmv; __time64_t tt = t;
         if (c[4] == 't' && c[5] == 'm') _gmtime64_s(NULL, &tt);     /* "nulltm" */
         else _gmtime64_s(&tmv, NULL);                               /* "nulltime" */

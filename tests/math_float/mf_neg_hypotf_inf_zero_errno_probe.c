@@ -1,17 +1,20 @@
 /* TC
  * id:    mf_neg_hypotf_inf_zero_errno_probe
  * area:  math_float
- * funcs: _hypotf
+ * funcs:
+ * procs: _hypotf
  * crt:   ucrtbase msvcr120
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _hypot, _hypotf; C11 F.10.4.3
  * note:  probes that _hypotf leaves errno untouched for inf/nan/denormal/zero inputs and returns the C99 values
  *        (hypot(inf,nan)=inf is C99; exact denormal result).
  */
 #include "tc.h"
 #include <math.h>
+TC_DECL_PROC(float, _hypotf, (float, float));  /* explicit prototype: mingw math.h gives none for ucrtbase, so a bare call was compiled as int _hypotf(double,double) */
+#define _hypotf tc_p__hypotf
 #include <errno.h>
 #include <float.h>
 
@@ -27,7 +30,7 @@ TC_CASE(nan_errno_unchanged) { volatile float a = v_nan, b = 1.0f, r; errno = SE
 
 int main(void)
 {
-    tc_begin(); v_inf = v_one / v_zero; v_nan = fb(0x7fc00000);
+    tc_begin(); TC_LOAD_PROC(_hypotf); if (!tc_p__hypotf) { tc_write("TC FAIL " TC_TEST_ID "::proc not exported\n"); return 1; } v_inf = v_one / v_zero; v_nan = fb(0x7fc00000);
     TC_RUN(inf_errno_unchanged); TC_RUN(zero_zero); TC_RUN(denormal_pair); TC_RUN(neg_args_symmetry); TC_RUN(nan_errno_unchanged);
     return tc_end();
 }

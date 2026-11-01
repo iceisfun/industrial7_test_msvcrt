@@ -5,9 +5,12 @@
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90 msvcrt
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs getenv_s, _wgetenv_s
  * note:  Handler counts asserted only where _set_invalid_parameter_handler exists.
+ *        Win10 22H2 19045 (observed): _wgetenv_s with varname == NULL returns 0 (errno untouched, *pReturnValue = 0, no handler call); the MS docs table
+ *        lists EINVAL, Windows deviates. The other rows (ERANGE, buffer NULL, pReturnValue NULL) behave as documented.
+ *        [unverified] on other CRTs: only ucrtbase 19045 was observed; the expectation is gated with TC_AT_LEAST(140) and the original expectation is kept for older CRTs.
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -35,8 +38,16 @@ TC_CASE(varname_NULL_EINVAL)
 {
     size_t ret = 5; wchar_t buf[8]; int before = tc_iph_count; errno_t e;
     errno = 0; e = _wgetenv_s(&ret, buf, 8, NULL);
+
+#if TC_AT_LEAST(140)
+    CHECK_EQ_I(e, 0); CHECK_EQ_I(errno, 0);      /* observed: varname == NULL is not validated */
+    CHECK_EQ_U(ret, 0);
+    if (have_iph) CHECK_EQ_I(tc_iph_count - before, 0);
+#else
     CHECK_EQ_I(e, EINVAL); CHECK_EQ_I(errno, EINVAL);
     if (have_iph) CHECK_EQ_I(tc_iph_count - before, 1);
+#endif
+
 }
 TC_CASE(pReturnValue_NULL_EINVAL)
 {

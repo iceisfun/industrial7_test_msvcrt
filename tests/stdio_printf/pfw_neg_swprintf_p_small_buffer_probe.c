@@ -6,11 +6,12 @@
  * procs: _vswprintf_p
  * crt:   >=80
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _swprintf_p (error reporting on truncation / count 0)
- * note:  PROBE. (1) too-small buffer: probes errno is ERANGE or EINVAL. (2) count==0 with a non-NULL buffer: probes a negative
- *        return with the buffer untouched. (3) count==len (no room for the terminator): probes a negative return and that the
- *        slots after count are untouched.
+ * note:  OBSERVED on ucrtbase for case errno_set (Win10 22H2 x64 (19045) ucrtbase.dll observed, raw: "errno_set errno == ERANGE || errno == EINVAL"; zzp_probe2 "vswprintf_p opt4 small: r=-2
+ *        errno=0 iph=0"): a too-small buffer in __stdio_common_vswprintf_p returns -2 and leaves errno untouched; the other two cases (negative
+ *        return, untouched slots after count) were right. Old expectation kept for pre-UCRT CRTs (unverified). Stable.
+ *        NOTE: -2 is the raw ucrtbase __stdio_common_v*printf_p export result (observed, not documented); MSVC headers map any negative result to -1.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -32,7 +33,11 @@ TC_CASE(errno_set)
     wchar_t b[8]; int r; tc_iph_count = 0; errno = 0;
     r = swp(b, 4, L"%1$s%2$s", L"abcde", L"fghij");
     CHECK(r < 0);
+#if TC_CRT_VER >= 140
+    CHECK_EQ_I(errno, 0);   /* ucrtbase observed: errno untouched, r == -2 */
+#else
     CHECK(errno == ERANGE || errno == EINVAL);
+#endif
 }
 TC_CASE(no_room_for_nul)
 {

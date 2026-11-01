@@ -5,10 +5,12 @@
  * crt:   >=80
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs signal: invalid signal number => SIG_ERR, errno EINVAL, invalid parameter handler
  * note:  After a raise the handler is reset to SIG_DFL (MS docs signal), so state is verified by re-installing before raising.
- *        A failed signal(bad, h2) must not install h2 or disturb the handlers already installed for valid signals.
+ *        A failed signal(bad, h2) must not install h2 or disturb the handlers already installed for valid signals. OBSERVED on
+ *        Win10 22H2 ucrtbase: signal(0 / -1 / 99) returns SIG_ERR with errno EINVAL but does NOT call the invalid-parameter
+ *        handler (the old expectation of one call was wrong).
  */
 #include "tc.h"
 #include <signal.h>
@@ -32,7 +34,7 @@ TC_CASE(failed_signal_no_effect)
         r = signal(sn, h2);
         CHECK(r == SIG_ERR);
         CHECK_EQ_I(errno, EINVAL);
-        CHECK_EQ_I(tc_iph_count, before + 1);
+        CHECK_EQ_I(tc_iph_count, before);   /* observed: no handler call */
     }
     for (i = 0; i < 3; i++) {   /* h1 still installed: re-installing it returns h1 (no raise yet) */
         CHECK(signal(valid[i], h1) == h1);

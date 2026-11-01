@@ -5,8 +5,9 @@
  * funcs: _ctime32_s
  * crt:   >=90
  * tier:  p1
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs ctime_s, _ctime32_s, _ctime64_s (buffer must be >= 26 chars; negative time invalid; NULL -> EINVAL)
+ * note:  Observed on Windows 10 22H2 build 19045 ucrtbase (triage-win10 wp2-time-0). a negative timer returns EINVAL/errno EINVAL but does NOT invoke the invalid-parameter handler (NULL buffer, small size and NULL timer do).
  */
 #include "tc.h"
 #include <time.h>
@@ -33,7 +34,11 @@ TC_CASE(negative_timer)
     char buf[40]; __time32_t t = v_neg; errno = 0; tc_iph_count = 0;
     CHECK_EQ_I(_ctime32_s(buf, sizeof buf, &t), EINVAL);
     CHECK_EQ_I(errno, EINVAL);
+#if TC_CRT_VER >= 140   /* ucrtbase: observed on Win10 22H2; older CRTs keep the original expectation (not run on Windows) */
+    CHECK_EQ_I(tc_iph_count, 0);   /* observed: a range failure does not call the invalid-parameter handler */
+#else
     CHECK(tc_iph_count >= 1);
+#endif
 }
 TC_CASE(null_timer)
 {

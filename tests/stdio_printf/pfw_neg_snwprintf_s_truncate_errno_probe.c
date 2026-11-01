@@ -8,7 +8,8 @@
  * kind:  negative
  * conf:  probe
  * ref:   MS docs errno constants (STRUNCATE = 80); strncpy_s/_snprintf_s _TRUNCATE
- * note:  PROBE: whether _snwprintf_s / _vsnwprintf_s with count == _TRUNCATE set errno to STRUNCATE (80) on truncation. Docs state this for the strcpy_s family; for _snprintf_s it is not explicit.
+ * note:  OBSERVED Win10 22H2 19045 ucrtbase (run twice): _snwprintf_s / _vsnwprintf_s with count == _TRUNCATE return -1 on truncation, leave errno UNCHANGED (0), do not call the handler, and leave the
+ *        truncated "123" + NUL. Docs state STRUNCATE for the strcpy_s family only; the old expectation errno == STRUNCATE was wrong here.
  */
 #include "tc.h"
 #include <stdarg.h>
@@ -43,12 +44,12 @@ TC_CASE(snwprintf_s_errno)
 {
     wchar_t b[16]; int n; fill(b); errno = 0;
     n = x_snwprintf_s(b, 4, TRUNC, vfmt, 123456);
-    CHECK_EQ_I(n, -1); CHECK_EQ_I(errno, STRUNCATE);
+    CHECK_EQ_I(n, -1); CHECK_EQ_I(errno, 0); CHECK_WSTR(b, L"123");
 }
 TC_CASE(vsnwprintf_s_errno)
 {
     wchar_t b[16]; int n; fill(b); errno = 0;
     n = vsnws(b, 4, TRUNC, vfmt, 123456);
-    CHECK_EQ_I(n, -1); CHECK_EQ_I(errno, STRUNCATE);
+    CHECK_EQ_I(n, -1); CHECK_EQ_I(errno, 0); CHECK_WSTR(b, L"123");
 }
 int main(void) { tc_begin(); CHECK(tc_iph_install()); CHECK(LOAD_SNWS()); TC_RUN(snwprintf_s_errno); TC_RUN(vsnwprintf_s_errno); return tc_end(); }

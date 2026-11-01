@@ -6,9 +6,13 @@
  * procs: bsearch_s _set_invalid_parameter_handler _errno
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100
  * tier:  p0
- * conf:  probe
- * note:  PROBE: bsearch_s with key == NULL and a valid array returns NULL, sets errno EINVAL, invokes the handler once and never calls compare. Unverified for msvcr100/110.
+ * conf:  observed
  * ref:   MS docs bsearch_s (parameter validation table lists key == NULL -> EINVAL)
+ * note:  Observed on Win10 22H2 19045 ucrtbase: bsearch_s with key == NULL does not validate the key (docs list NULL key as an
+ *        invalid parameter, real ucrtbase does not): the comparator is invoked with a NULL key, no handler call, errno
+ *        unchanged. DEVIATES from C11 K.3.6.3.1p2 (key must be non-NULL when nmemb > 0) and from the MS docs table (NULL key -> EINVAL +
+ *        handler). The observed expectation is guarded by TC_CRT_VER >= 140; the older CRT branch keeps the original docs
+ *        expectation (NULL, EINVAL, handler once, no compare) and is [unverified] (not run on the reference).
  */
 #include "tc.h"
 #include <stddef.h>
@@ -27,9 +31,19 @@ static volatile size_t v_sz, v_num;
 static cmp_t volatile v_cmp;
 
 #define PRE() do { *tc_p__errno() = 0; tc_iph_count = 0; cmp_calls = 0; } while (0)
-#define BAD() do { CHECK(r == NULL); CHECK_EQ_I(*tc_p__errno(), EINVAL); CHECK_EQ_I(tc_iph_count, 1); CHECK_EQ_I(cmp_calls, 0); } while (0)
 
-TC_CASE(null_key)    { void *r; PRE(); v_sz = sizeof(int); v_num = 4; r = tc_p_bsearch_s(v_null, arr, v_num, v_sz, cmp, NULL); BAD(); }
+TC_CASE(null_key)
+{
+    void *r; PRE(); v_sz = sizeof(int); v_num = 4; r = tc_p_bsearch_s(v_null, arr, v_num, v_sz, cmp, NULL);
+    /* observed: key == NULL is NOT validated; the comparator is called with a NULL key (our cmp answers 0 = "equal"), so the
+     * element it was compared against comes back, errno is untouched and the handler never runs */
+#if TC_CRT_VER >= 140
+    CHECK(r != NULL); CHECK((const int *)r >= arr && (const int *)r < arr + 4);
+    CHECK_EQ_I(*tc_p__errno(), 0); CHECK_EQ_I(tc_iph_count, 0); CHECK(cmp_calls >= 1);
+#else   /* [unverified] original docs expectation */
+    CHECK(r == NULL); CHECK_EQ_I(*tc_p__errno(), EINVAL); CHECK_EQ_I(tc_iph_count, 1); CHECK_EQ_I(cmp_calls, 0);
+#endif
+}
 
 int main(void)
 {

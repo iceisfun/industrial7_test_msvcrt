@@ -6,9 +6,11 @@
  * procs: __stdio_common_vsscanf
  * crt:   win10
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs scanf_s / Parameter validation (secure CRT too-small buffer is an error)
  * note:  PROBES that a too-small scanf_s destination yields return count excluding the failed item and buffer[0]==0 (exact wording not verified against docs; assertion is from memory). Secure-CRT scanf with a destination too small for the input. A handler is installed so the invalid-parameter path returns.
+ * note:  OBSERVED (Win10 22H2 19045; raw "r == 0 got=-1 want=0" at nul_no_room_exact): when the whole input fits in the buffer but the terminating NUL does not,
+ *        the call returns EOF (-1), not 0, and buffer[0] is still cleared (the 'abcdef' overflow cases return 0). Class A, deterministic (no locale/time dependence).
  */
 #include "tc.h"
 #include <stdarg.h>
@@ -51,7 +53,7 @@ TC_CASE(nul_no_room_exact)
     char b[8]; int r;   /* "abc" needs 4 with the NUL, size 3 is too small */
     memset(b, 'z', sizeof b);
     r = xs("abc", "%s", b, 3u);
-    CHECK_EQ_I(r, 0); CHECK(b[0] == 0);
+    CHECK_EQ_I(r, -1); CHECK(b[0] == 0);   /* observed: EOF, input exhausted while the NUL has no room */
 }
 
 int main(void)

@@ -6,9 +6,10 @@
  * crt:   win10
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs sprintf_s (silent on buffer contents after failure)
- * note:  PROBE: after a failed sprintf_s (buffer too small, NULL format) with a valid buffer of size>0, buffer[0] is set to 0 (UCRT secure printf family terminates the buffer on error). Not documented.
+ * note:  Win10 22H2 (observed): after a failed sprintf_s because the buffer is too small, buffer[0] is set to 0 (small_narrow/small_wide); for a NULL format
+ *        the call returns <0 with EINVAL and one handler call but does NOT terminate the buffer (buffer[0] stays as it was).
  */
 #include "tc.h"
 #include <stdarg.h>
@@ -73,7 +74,8 @@ TC_CASE(null_format)
     memset(b, 'S', sizeof b);
     RESET();
     n = W_sps(0, b, sizeof b, NULL);
-    CHECK(n < 0); CHECK_EQ_I(b[0], 0);
+    CHECK(n < 0); CHECK_EQ_I(b[0], 'S');   /* observed on Win10 22H2: a NULL format fails (EINVAL, one handler call) but leaves the buffer untouched */
+    CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
 }
 
 int main(void)

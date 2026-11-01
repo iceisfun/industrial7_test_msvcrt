@@ -3,11 +3,12 @@
  * area:  stdio_printf
  * kind:  negative
  * funcs: fwprintf fopen fclose
- * crt:   all
+ * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs fwprintf / wctomb (EILSEQ on unconvertible wide char)
- * note:  PROBE: in the C locale a wide char U+4E2D written by fwprintf to an ANSI-mode file cannot be converted: returns negative and errno == EILSEQ.
+ * note:  Observed on Windows 10 22H2, "C" locale: fwprintf(f, L"%lc", U+4E2D) to an ANSI-mode file returns 1 (the unconvertible character is written as '?') with
+ *        errno EILSEQ, not a negative value. Deviates from C11 7.29.2.1/7.21.6.1p14 (encoding error -> negative return).
  */
 #include "tc.h"
 #define TC_S_(x) #x
@@ -23,9 +24,11 @@ TC_CASE(unconvertible)
     CHECK(f != NULL); if (!f) return;
     errno = 0;
     n = fwprintf(f, L"%lc", (wint_t)wc);
-    CHECK(n < 0);
+    CHECK_EQ_I(n, 1);
     CHECK_EQ_I(errno, EILSEQ);
     fclose(f);
+    f = fopen(F, "rb"); CHECK(f != NULL);
+    if (f) { char b[8] = {0}; size_t k = fread(b, 1, sizeof b, f); CHECK_EQ_I((int)k, 1); CHECK_EQ_I(b[0], '?'); fclose(f); }
 }
 int main(void)
 {

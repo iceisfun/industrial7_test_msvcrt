@@ -9,6 +9,7 @@
  * ref:   MS docs Parameter validation; __fastfail
  * note:  PROBE: exact exit status of the UCRT default invalid-parameter path: expected 0xC0000409 (STATUS_STACK_BUFFER_OVERRUN,
  *        fast fail) for both a sprintf_s overflow and a sprintf NULL format. Measure on Windows 10/11.
+ *        Win10 22H2 fix: child calls tc_iph_default() first (mingw crtexe installs a no-op handler).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -31,6 +32,7 @@ int main(void)
     const char *c; char b[2];
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();
         if (c[0] == 'o') sprintf_s(b, 2, sfmt, "abc");
         else sprintf(b, nullfmt);
         return 77;

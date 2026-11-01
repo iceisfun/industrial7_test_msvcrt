@@ -3,11 +3,13 @@
  * area:  stdio_printf
  * kind:  negative
  * funcs: _snprintf_s _snwprintf_s
- * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90
+ * crt:   ucrtbase
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _snprintf_s (return value, errno)
- * note:  PROBE: errno after _TRUNCATE truncation (docs only name STRUNCATE for strcpy_s family; UCRT is believed to set ERANGE) and that count-limited truncation (count<size) leaves errno unchanged at 0. Return -1 and no handler are also asserted (documented).
+ * note:  errno after _TRUNCATE truncation. Observed Win10 22H2 ucrtbase (corrects the old ERANGE guess): errno stays 0 on _TRUNCATE truncation, narrow and wide; count-limited truncation (count<size) also leaves errno 0. Return -1 and no handler are also asserted (documented).
+ *        Raw evidence (baseline): truncate_errno errno == ERANGE got=0 want=34 ; wide_truncate_errno got=0.
+ *        crt narrowed to ucrtbase: the observed behaviour was measured on Win10 22H2 ucrtbase only (older CRTs [unverified]).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -24,7 +26,7 @@ TC_CASE(truncate_errno)
     tc_iph_count = 0; errno = 0;
     r = _snprintf_s(b, n, c, "%s", "abcdefgh");
     CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 0); CHECK_STR(b, "abc");
-    CHECK_EQ_I(errno, ERANGE);
+    CHECK_EQ_I(errno, 0);   /* observed: not set */
 }
 TC_CASE(count_errno)
 {
@@ -40,7 +42,7 @@ TC_CASE(wide_truncate_errno)
     tc_iph_count = 0; errno = 0;
     r = _snwprintf_s(b, n, c, L"%ls", L"abcdefgh");
     CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 0); CHECK_WSTR(b, L"abc");
-    CHECK_EQ_I(errno, ERANGE);
+    CHECK_EQ_I(errno, 0);   /* observed: not set */
 }
 TC_CASE(wide_count_errno)
 {

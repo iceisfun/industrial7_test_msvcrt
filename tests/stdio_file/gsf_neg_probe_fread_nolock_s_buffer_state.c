@@ -5,9 +5,11 @@
  * crt:   >=80
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs fread_s (silent on buffer state)
  * note:  PROBE: whether the destination buffer is zero-filled (memset) after a buffer-too-small failure, and that the stream position is unchanged. Believed from UCRT fread_s behaviour; older CRTs may differ.
+ *        TRIAGE win1093[34])?#934, class A): on ucrtbase 10.0.19045 _fread_nolock_s with buffer_size 8 < 12 requested zero-fills the 8 bytes, fails (ERANGE, 1 handler call) but the
+ *        stream position has advanced by one byte (ftell == 1, next fgetc 'B'; fread_s behaves the same, observed in a scratch probe). Old 'position unchanged' kept for non-UCRT.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -44,7 +46,11 @@ TC_CASE(file_position_after_failure)
     CHECK(tc_iph_install());
     vsz = 1; vcnt = 12; vbuf = 8;
     _fread_nolock_s(b, vbuf, vsz, vcnt, fp);
+#if TC_AT_LEAST(140)
+    CHECK_EQ_I(ftell(fp), 1);   /* observed ucrtbase 10.0.19045: one byte is consumed before the buffer-too-small failure (next fgetc is 'B') */
+#else
     CHECK_EQ_I(ftell(fp), 0);
+#endif
     fclose(fp); remove(fn);
 }
 int main(void) { tc_begin(); TC_RUN(buffer_zero_filled); TC_RUN(file_position_after_failure); return tc_end(); }

@@ -5,10 +5,11 @@
  * funcs: __stdio_common_vsprintf __stdio_common_vsprintf_s __stdio_common_vsprintf_p __stdio_common_vswprintf __stdio_common_vswprintf_s
  * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf_p positional parameters (only the _p functions support "%n$")
- * note:  PROBES: the non-_p workers treat "%1$d" as an invalid format (negative return; the _s workers also call the invalid parameter
- *        handler and set EINVAL). Control: the _p worker accepts the same format (documented).
+ * note:  The _s workers reject "%1$d" (negative return, EINVAL, handler once; unchanged, passes). Control: the _p worker accepts the same format (documented).
+ *        Observed Win10 22H2: the plain (non-_s, non-_p) workers do NOT reject "%1$d": "%1$d" is parsed as width 1 followed by literal "$d": returns 2, output "$d", errno 0, no handler call (no validation outside _s/_p).
+ *        Raw evidence (baseline): TC FAIL ...::nonp_narrow r < 0 ; errno == EINVAL got=0 want=22 (same for nonp_wide).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -33,9 +34,9 @@ static const char * volatile fmt = "%1$d";
 static const wchar_t * volatile wfmt = L"%1$d";
 
 TC_CASE(control_p) { char b[16]; int r = cp(b, 16, fmt, 5); CHECK_EQ_I(r, 1); CHECK_STR(b, "5"); }
-TC_CASE(nonp_narrow) { char b[16]; int r; errno = 0; r = cv(b, 16, fmt, 5); CHECK(r < 0); CHECK_EQ_I(errno, EINVAL); }
+TC_CASE(nonp_narrow) { char b[16]; int r; errno = 0; tc_iph_count = 0; r = cv(b, 16, fmt, 5); CHECK_EQ_I(r, 2); CHECK_STR(b, "$d"); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0); }
 TC_CASE(s_narrow) { char b[16]; int r; tc_iph_count = 0; errno = 0; r = cs(b, 16, fmt, 5); CHECK(r < 0); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1); }
-TC_CASE(nonp_wide) { wchar_t b[16]; int r; errno = 0; r = cw(b, 16, wfmt, 5); CHECK(r < 0); CHECK_EQ_I(errno, EINVAL); }
+TC_CASE(nonp_wide) { wchar_t b[16]; int r; errno = 0; tc_iph_count = 0; r = cw(b, 16, wfmt, 5); CHECK_EQ_I(r, 2); CHECK_WSTR(b, L"$d"); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0); }
 TC_CASE(s_wide) { wchar_t b[16]; int r; tc_iph_count = 0; errno = 0; r = cws(b, 16, wfmt, 5); CHECK(r < 0); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1); }
 int main(void)
 {

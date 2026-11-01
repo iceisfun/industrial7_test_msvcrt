@@ -6,9 +6,11 @@
  * crt:   >=140
  * tier:  p2
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   none
- * note:  PROBE: the exported ucrtbase strnlen(NULL, n) returns 0 (for n==0 and n==5) without faulting. Each call runs in a child process (exit 0 = returned 0, 1 = returned nonzero, crash code otherwise).
+ * note:  Each call runs in a child process. Observed on Win10 22H2 ucrtbase: strnlen(NULL, 0) returns 0 (count 0 never
+ *        dereferences), strnlen(NULL, 5) faults with an access violation (exit 0xC0000005); the crash is the documented-nowhere
+ *        but real behaviour (no parameter validation).
  */
 #include "tc.h"
 
@@ -23,7 +25,7 @@ static int child_main(const char *name)
     return f(NULL, n) == 0 ? 0 : 1;
 }
 TC_CASE(null_count0) { DWORD c = 99; CHECK(tc_spawn_self("null0", &c, 20000)); CHECK_EQ_U(c, 0); }
-TC_CASE(null_count5) { DWORD c = 99; CHECK(tc_spawn_self("null5", &c, 20000)); CHECK_EQ_U(c, 0); }
+TC_CASE(null_count5) { DWORD c = 99; CHECK(tc_spawn_self("null5", &c, 20000)); CHECK_EQ_U(c, 0xC0000005u); } /* Class C: Windows crashes */
 
 int main(void)
 {

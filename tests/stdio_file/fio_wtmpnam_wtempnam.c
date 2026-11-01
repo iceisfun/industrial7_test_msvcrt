@@ -5,13 +5,20 @@
  * procs: _wtmpnam, _wtempnam
  * crt:   all
  * tier:  p2
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs tmpnam, _wtmpnam; _tempnam, _wtempnam
+ *        OBSERVED (Win10 22H2, class A): _wtmpnam(NULL) returns L"C:\Users\ADMINI~1\AppData\Local\Temp\v62s.0" (43 wchar_t) so the old < mingw L_tmpnam (14) bound failed.
  */
 #include "tc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <wchar.h>
+
+/* UCRT _wtmpnam returns a full temp-dir path (observed 43 wchar_t); ucrt L_tmpnam is 260, mingw's 14 is wrong for ucrtbase. */
+#if TC_CRT_VER >= 140
+#undef L_tmpnam
+#define L_tmpnam 260
+#endif
 
 TC_DECL_PROC(wchar_t *, _wtmpnam, (wchar_t *));
 TC_DECL_PROC(wchar_t *, _wtempnam, (const wchar_t *, const wchar_t *));

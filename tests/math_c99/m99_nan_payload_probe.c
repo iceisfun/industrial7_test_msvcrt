@@ -5,9 +5,10 @@
  * crt:   ucrtbase msvcr120
  * tier:  p2
  * kind:  positive
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.12.11.2 (tag handling implementation-defined); MS docs nan
- * note:  PROBE: whether Windows honours the tagp payload. Expected (most likely): decimal/hex/octal tag via strtoull-like parse placed in mantissa below quiet bit; unrecognised tag gives same bits as empty tag; result sign bit clear (x86 hardware default NaN is negative, so not guaranteed).
+ * note:  OBSERVED on Win10 22H2: nan(tagp) ignores the tag; nan("1"), nan("123"), nan("0x10") all return the default quiet NaN 0x7ff8000000000000 (C11 7.12.11.2 leaves tag handling implementation-defined).
+ *        PROBE: whether Windows honours the tagp payload. Expected (most likely): decimal/hex/octal tag via strtoull-like parse placed in mantissa below quiet bit; unrecognised tag gives same bits as empty tag; result sign bit clear (x86 hardware default NaN is negative, so not guaranteed).
  */
 #include "tc.h"
 #include <math.h>
@@ -22,9 +23,9 @@ static volatile float f_zero = 0.0f, f_one = 1.0f;
 #define NANBITS(s) ({ volatile const char *t_ = (s); tc_dbits(nan((const char *)t_)); })
 
 TC_CASE(empty_bits) { CHECK_EQ_U(NANBITS(""), 0x7ff8000000000000ULL); }
-TC_CASE(tag1) { CHECK_EQ_U(NANBITS("1"), 0x7ff8000000000001ULL); }
-TC_CASE(tag123) { CHECK_EQ_U(NANBITS("123"), 0x7ff8000000000000ULL | 123); }
-TC_CASE(tag_hex) { CHECK_EQ_U(NANBITS("0x10"), 0x7ff8000000000000ULL | 16); }
+TC_CASE(tag1) { CHECK_EQ_U(NANBITS("1"), 0x7ff8000000000000ULL); }
+TC_CASE(tag123) { CHECK_EQ_U(NANBITS("123"), 0x7ff8000000000000ULL); }
+TC_CASE(tag_hex) { CHECK_EQ_U(NANBITS("0x10"), 0x7ff8000000000000ULL); }
 TC_CASE(float_empty) { volatile const char *t = ""; CHECK_EQ_U(tc_fbits(nanf((const char *)t)), 0x7fc00000u); }
 TC_CASE(sign_clear) { volatile const char *t = ""; CHECK_EQ_U(tc_dbits(nan((const char *)t)) >> 63, 0); }
 TC_CASE(float_sign_clear) { volatile const char *t = ""; CHECK_EQ_U(tc_fbits(nanf((const char *)t)) >> 31, 0); }

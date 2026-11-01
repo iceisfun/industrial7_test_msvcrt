@@ -7,7 +7,9 @@
  * kind:  negative
  * conf:  probe
  * ref:   C11 7.22.6.2 (UB if not representable)
- * note:  PROBE: div(INT_MIN,-1) / ldiv(LONG_MIN,-1). Hardware idiv overflow raises #DE, which the NT kernel reports as 0xC0000094 (STATUS_INTEGER_DIVIDE_BY_ZERO; 0xC0000095 is only for INTO). A CRT could instead return quot==INT_MIN. Accepts 0xC0000094, 0xC0000095 or a returned quot==MIN and prints which one occurred; the only failure is any third outcome.
+ * note:  PROBE: div(INT_MIN,-1) / ldiv(LONG_MIN,-1). Hardware idiv overflow raises #DE, which the NT kernel reports as 0xC0000094 (STATUS_INTEGER_DIVIDE_BY_ZERO). Observed on Win10 22H2 19045 (twice): idiv INT_MIN/-1 is reported as 0xC0000095 (STATUS_INTEGER_OVERFLOW). A CRT could instead return quot==INT_MIN. Accepts 0xC0000094, 0xC0000095 or a returned quot==MIN and prints which one occurred; the only failure is any third outcome.
+ *        Win10 22H2 19045: the baseline run hung (exit 0xdead0002) because the unhandled exception was left to WER in the guest; the child now installs a
+ *        vectored handler that exits with the exception code, so the outcome is deterministic and bounded (class E).
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -15,6 +17,9 @@
 
 static volatile int a = INT_MIN, m1 = -1; static volatile long la = LONG_MIN, lm1 = -1;
 
+/* Child only: turn the hardware exception into the process exit code. Without this the unhandled #DE goes through the mingw startup
+ * filter and WER, which hung past the 20 s bound in the reference VM (baseline TIMEOUT, exit=0xdead0002); the exception code is the datum. */
+static LONG CALLBACK veh(EXCEPTION_POINTERS *ep) { ExitProcess(ep->ExceptionRecord->ExceptionCode); return EXCEPTION_CONTINUE_SEARCH; }
 static void report(const char *what, DWORD c)
 {
     char b[32]; tc_write("TC INFO " TC_TEST_ID " "); tc_write(what); tc_write(" exit="); tc_hex(c, b); tc_write(b); tc_write("\n");
@@ -28,6 +33,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        AddVectoredExceptionHandler(1, veh);
         if (tc_strequ(c, "div")) { div_t d = div(a, m1); return d.quot == INT_MIN ? 100 : 55; }
         if (tc_strequ(c, "ldiv")) { ldiv_t d = ldiv(la, lm1); return d.quot == LONG_MIN ? 100 : 55; }
         return 77;

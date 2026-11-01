@@ -5,9 +5,12 @@
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90 msvcrt
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs getenv_s, _wgetenv_s (parameter table)
- * note:  Handler counts are asserted only where _set_invalid_parameter_handler exists in the DLL; return value and errno are always asserted.
+ * note:  Handler counts are asserted only where _set_invalid_parameter_handler exists in the DLL. OBSERVED on Win10 22H2
+ *        ucrtbase: a NULL buffer with size>0, a non-NULL buffer with size 0, and a NULL preturn are rejected (EINVAL, handler
+ *        call), but getenv_s with a NULL varname returns 0, errno 0 and no handler call (differs from the MS docs parameter
+ *        table).
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -36,8 +39,8 @@ TC_CASE(varname_null)
 {
     size_t ret = 123; char buf[8] = "zz"; int before = tc_iph_count; errno_t e;
     errno = 0; e = getenv_s(&ret, buf, sizeof buf, NULL);
-    CHECK_EQ_I(e, EINVAL); CHECK_EQ_I(errno, EINVAL);
-    if (have_iph) CHECK_EQ_I(tc_iph_count - before, 1);
+    CHECK_EQ_I(e, 0); CHECK_EQ_I(errno, 0);   /* observed: a NULL varname is NOT validated, it behaves as "not found" */
+    if (have_iph) CHECK_EQ_I(tc_iph_count - before, 0);
 }
 TC_CASE(preturn_null)
 {
@@ -54,7 +57,7 @@ TC_CASE(errno_set_each)
         if (i == 0) getenv_s(&ret, NULL, vsz, "TC_E1");
         else if (i == 1) getenv_s(&ret, buf, sizeof buf, NULL);
         else getenv_s(NULL, buf, sizeof buf, "TC_E1");
-        CHECK_EQ_I(errno, EINVAL);
+        CHECK_EQ_I(errno, i == 1 ? 0 : EINVAL);
     }
 }
 int main(void)

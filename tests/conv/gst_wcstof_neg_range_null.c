@@ -48,7 +48,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) {
+    if ((c = tc_child_name()) != NULL) { tc_iph_default();
         if (c[0] == 's') return 77;
         (void)wcstof(NULL, NULL);
         return 77;

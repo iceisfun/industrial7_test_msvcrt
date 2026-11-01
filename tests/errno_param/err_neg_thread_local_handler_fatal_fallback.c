@@ -37,6 +37,7 @@ int main(void)
     if ((c = tc_child_name()) != NULL) {
         HANDLE h;
         if (!tc_p__set_thread_local_invalid_parameter_handler) return 3;
+        tc_iph_default();
         tc_p__set_thread_local_invalid_parameter_handler(tc_iph);
         h = CreateThread(NULL, 0, worker, NULL, 0, NULL);
         if (!h) return 4;

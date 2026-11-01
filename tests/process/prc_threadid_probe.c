@@ -5,25 +5,26 @@
  * procs: __threadid
  * crt:   all
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _threadid (macro over __threadid in the old CRT headers)
- * note:  PROBE: whether __threadid is exported and returns a pointer to the Win32 thread id (GetCurrentThreadId).
- *        Missing export => SKIP. Each probe runs in a child process because the behaviour of calling it is unverified
- *        (a crash would otherwise take the other cases with it); child exit 0 = ok, 10 = not exported, 11 = mismatch.
+ * note:  Observed on Win10 22H2 19045 ucrtbase: __threadid IS exported but returns the Win32 thread id by value (probe printed
+ *        0x120 == GetCurrentThreadId() == 288), NOT a pointer to it; the old pointer-returning typedef dereferenced the id
+ *        (0xC0000005). Test now compares the returned value with GetCurrentThreadId() on the main and on a _beginthreadex
+ *        thread.
  */
 #include "tc.h"
 #include <process.h>
 
-typedef unsigned long *(__cdecl *threadid_t)(void);
+typedef unsigned long (__cdecl *threadid_t)(void);   /* observed: ucrtbase __threadid returns the thread id by value, not a pointer */
 static threadid_t p_tid;
 static volatile DWORD g_wtid, g_wwin;
-static unsigned __stdcall worker(void *a) { (void)a; g_wtid = *p_tid(); g_wwin = GetCurrentThreadId(); return 0; }
+static unsigned __stdcall worker(void *a) { (void)a; g_wtid = p_tid(); g_wwin = GetCurrentThreadId(); return 0; }
 
 static int child_main(const char *n)
 {
     p_tid = (threadid_t)tc_crt_proc("__threadid");
     if (!p_tid) return 10;
-    if (n[0] == 'm') return (p_tid() != NULL && *p_tid() == GetCurrentThreadId()) ? 0 : 11;
+    if (n[0] == 'm') return (p_tid() == GetCurrentThreadId()) ? 0 : 11;
     {
         unsigned id; HANDLE h = (HANDLE)_beginthreadex(NULL, 0, worker, NULL, 0, &id);
         if (!h) return 12;

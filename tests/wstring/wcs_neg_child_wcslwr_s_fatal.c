@@ -31,6 +31,7 @@ int main(void)
     const char *c;
     tc_begin(); TC_LOAD_PROC(_wcslwr_s);
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();   /* mingw startup installs a no-op handler; restore the CRT default (fatal) */
         wchar_t d[4] = { L'A', L'B', L'C', L'D' };
         if (!tc_p__wcslwr_s) return 78;
         if (c[0] == 'n') tc_p__wcslwr_s(vnull, 4);

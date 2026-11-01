@@ -26,6 +26,7 @@ int main(void)
     static const char s[8] = "abcdefg";
     tc_begin();
     if (tc_child_name()) {
+        tc_iph_default();
         cp_t cpy = (cp_t)tc_crt_proc("memcpy_s");
         if (!cpy) return 78;
         cpy(NULL, 8, s, 4);

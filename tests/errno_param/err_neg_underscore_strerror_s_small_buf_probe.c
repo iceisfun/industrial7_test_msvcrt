@@ -5,35 +5,34 @@
  * funcs: _strerror_s _set_invalid_parameter_handler
  * crt:   >=90
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _strerror_s
- * note:  PROBE: a too-small buffer is assumed to yield a nonzero return (ERANGE) and a NUL-terminated buffer.
+ * note:  Observed on Win10 22H2 19045 ucrtbase: _strerror_s(buf, 4, "abcdef") (message does not fit) terminates the process
+ *        with STATUS_STACK_BUFFER_OVERRUN 0xC0000409 even though a returning invalid-parameter handler is installed (the CRT
+ *        checks its internal strcpy_s with _ERRCHECK = fast-fail), so the old in-process expectation (nonzero return, NUL-
+ *        terminated) cannot be observed. Moved to a child process (class C).
  */
 #include "tc.h"
 #include <string.h>
 #include <errno.h>
 
-TC_CASE(small_buffer)
+TC_CASE(small_buffer_fastfails_despite_handler)
 {
-    char buf[8]; errno_t r;
-    memset(buf, 'x', sizeof buf);
-    errno = ENOENT;
-    r = _strerror_s(buf, 4, "abcdef");
-    CHECK(memchr(buf, 0, 4) != NULL);
-    CHECK(r == 0 || r == ERANGE || r == EINVAL);
-}
-TC_CASE(small_buffer_returns_error)
-{
-    char buf[8]; errno_t r;
-    memset(buf, 'x', sizeof buf);
-    errno = ENOENT;
-    r = _strerror_s(buf, 4, "abcdef");
-    CHECK(r != 0);   /* guess: ERANGE rather than silent truncation */
+    DWORD code = 0; int ran = tc_spawn_self("small", &code, 20000);
+    CHECK(ran);
+    CHECK(code != 77);                     /* did not return */
+    CHECK_EQ_U(code, TC_STATUS_FASTFAIL);  /* observed: internal _ERRCHECK fast-fails; the installed handler does not save it */
 }
 int main(void)
 {
     tc_begin();
-    if (!tc_iph_install()) { tc_write("TC FAIL " TC_TEST_ID "::__setup no _set_invalid_parameter_handler\n"); return 1; }
-    TC_RUN(small_buffer); TC_RUN(small_buffer_returns_error);
+    if (tc_child_name() != NULL) {
+        char buf[8]; memset(buf, 'x', sizeof buf);
+        if (!tc_iph_install()) return 78;   /* a returning handler is installed: the process still dies */
+        errno = ENOENT;
+        _strerror_s(buf, 4, "abcdef");
+        return 77;
+    }
+    TC_RUN(small_buffer_fastfails_despite_handler);
     return tc_end();
 }

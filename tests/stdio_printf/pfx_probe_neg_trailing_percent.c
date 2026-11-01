@@ -5,9 +5,11 @@
  * funcs: fprintf fopen fclose
  * crt:   >=100
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf format specification
- * note:  Probing -1 / EINVAL / iph count 1 for a format ending in a lone '%'.
+ * note:  OBSERVED on ucrtbase (Win10 22H2 x64 (19045) ucrtbase.dll observed, raw: "trailing r == -1 got=2"; zzp_probe2 "sprintf trailing %: r=2 errno=0 iph=0 b=[ab]"): a format ending in a lone
+ *        '%' prints the text before it ("ab", r=2) and drops the '%'; no errno, no handler. The -1/EINVAL/handler belief is kept for pre-UCRT CRTs
+ *        (unverified). C11 7.21.6.1p2/p9: incomplete conversion spec is UB. Stable.
  */
 #include "tc.h"
 #define TC_S_(x) #x
@@ -23,7 +25,11 @@ TC_CASE(trailing)
 {
     FILE *f = fopen(TMP, "w"); int r; CHECK(f != NULL); if (!f) return;
     tc_iph_count = 0; errno = 0; r = fprintf(f, g_fmt);
+#if TC_CRT_VER >= 140
+    CHECK_EQ_I(r, 2); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);   /* ucrtbase observed: "ab%" -> "ab" */
+#else
     CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+#endif
     fclose(f); DeleteFileA(TMP);
 }
 int main(void)

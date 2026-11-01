@@ -31,7 +31,7 @@ int main(void)
     if ((c = tc_child_name()) != NULL) {
         struct _finddata64i32_t fd; const char *volatile s = NULL;
         TC_LOAD_PROC(_findfirst64i32); if (!tc_p__findfirst64i32) return 78;
-        tc_p__findfirst64i32(s, &fd);
+        tc_iph_default(); tc_p__findfirst64i32(s, &fd);
         return 77;
     }
     TC_RUN(child_terminates);

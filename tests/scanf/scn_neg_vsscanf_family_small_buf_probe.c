@@ -5,10 +5,12 @@
  * funcs: __stdio_common_vsscanf __stdio_common_vswscanf
  * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs scanf_s (buffer too small); vsscanf_s, vswscanf_s
  * note:  Probes the va_list secure variants with a destination size smaller than the string: guess ret 0, errno ERANGE,
  *        invalid-parameter handler called, and destination[0] set to 0 (docs for scanf_s say first char is set to null).
+ *        CORRECTED for Win10 22H2 ucrtbase (observed 2026-10-31): a too-small _s destination returns 0 with errno=ENOMEM (12) (not ERANGE) and does NOT call the invalid parameter handler (count 0).
+ *        MS docs do not document either. Stable (2 runs).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -27,14 +29,14 @@ TC_CASE(vsscanf_s_small_buf)
     char b[8]; int r;
     b[0] = 'Z'; tc_iph_install(); tc_iph_count = 0; errno = 0; vin = "abcdef";
     r = call_vsscanf_s(vin, "%s", b, (unsigned)4);
-    CHECK_EQ_I(r, 0); CHECK_EQ_I(errno, ERANGE); CHECK(tc_iph_count >= 1); CHECK_EQ_I(b[0], 0);
+    CHECK_EQ_I(r, 0); CHECK_EQ_I(errno, ENOMEM); CHECK_EQ_I(tc_iph_count, 0); CHECK_EQ_I(b[0], 0);
 }
 TC_CASE(vswscanf_s_small_buf)
 {
     wchar_t b[8]; int r;
     b[0] = L'Z'; tc_iph_install(); tc_iph_count = 0; errno = 0; win = L"abcdef";
     r = call_vswscanf_s(win, L"%s", b, (unsigned)4);
-    CHECK_EQ_I(r, 0); CHECK_EQ_I(errno, ERANGE); CHECK(tc_iph_count >= 1); CHECK_EQ_I(b[0], 0);
+    CHECK_EQ_I(r, 0); CHECK_EQ_I(errno, ENOMEM); CHECK_EQ_I(tc_iph_count, 0); CHECK_EQ_I(b[0], 0);
 }
 int main(void)
 {

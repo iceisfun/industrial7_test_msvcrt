@@ -27,7 +27,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) { void *volatile p = NULL; (void)_msize(p); return 77; }
+    if ((c = tc_child_name()) != NULL) { void *volatile p = NULL; tc_iph_default(); (void)_msize(p); return 77; }
     TC_RUN(child_terminates);
     return tc_end();
 }

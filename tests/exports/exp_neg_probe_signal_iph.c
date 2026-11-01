@@ -4,11 +4,13 @@
  * kind:  negative
  * funcs: 
  * procs: signal raise _errno
- * crt:   >=100
+ * crt:   ucrtbase
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs signal, raise, Parameter Validation
  * note:  Probing: signal(9999)/raise(9999) invoke the invalid-parameter handler (once each) and raise sets errno EINVAL.
+ * note:  OBSERVED (Win10 22H2 19045; raw "tc_iph_count == 1 got=0" for signal): signal(9999,h) returns SIG_ERR without invoking the
+ *        invalid-parameter handler; raise(9999) does (count 1, errno 22). Class A.
  */
 #include "tc.h"
 
@@ -25,7 +27,7 @@ TC_CASE(signal_calls_handler)
     if (!sg) return;
     tc_iph_count = 0;
     CHECK((intptr_t)sg(9999, h) == -1);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(tc_iph_count, 0);   /* observed Win10 22H2: signal() with a bad signum fails with SIG_ERR but does NOT call the handler */
 }
 TC_CASE(raise_calls_handler_and_sets_errno)
 {

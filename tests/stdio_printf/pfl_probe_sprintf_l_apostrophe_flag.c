@@ -4,10 +4,12 @@
  * funcs: _sprintf_l _create_locale _free_locale
  * crt:   win10
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf format specification (flags: - + 0 space #; no grouping flag)
- * note:  PROBE: the POSIX apostrophe grouping flag is not a Microsoft flag. Expectation: ucrt treats "%'d" as an invalid format
- *        (invalid-parameter handler called, return -1, errno EINVAL). Only the return value, errno and handler count are asserted.
+ * note:  OBSERVED (Win10 22H2 x64 (19045) ucrtbase.dll observed, raw: "apostrophe_d_c_locale n == -1 got=2"; zzp_probe2 "%'d C: r=2 errno=0 iph=0 b=['d]" and same for German_Germany.1252):
+ *        the POSIX apostrophe is not a Microsoft flag; "%'d" is not a recognised specification, % is dropped and "'d" printed literally (2 chars)
+ *        in both the C and the German locale; no handler, errno unchanged, the argument is not consumed. Old belief (-1/EINVAL/handler) wrong.
+ *        C11 7.21.6.1: the ' flag is not defined by ISO C (UB). Stable; locale-independent for both locales tried.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -25,10 +27,10 @@ static void run(const char *name)
     tc_iph_install(); tc_iph_count = 0; errno = 0;
     b[0] = 0;
     n = _sprintf_l(b, "%'d", l, v_i);
-    CHECK_EQ_I(n, -1); CHECK_EQ_I(tc_iph_count, 1); CHECK_EQ_I(errno, EINVAL);
+    CHECK_EQ_I(n, 2); CHECK_STR(b, "'d"); CHECK_EQ_I(tc_iph_count, 0); CHECK_EQ_I(errno, 0);
     _free_locale(l);
 }
-TC_CASE(apostrophe_d_c_locale_result_or_iph) { run(v_c); }
-TC_CASE(apostrophe_d_de_locale_result_or_iph) { run(v_de); }
+TC_CASE(apostrophe_d_c_locale_literal) { run(v_c); }
+TC_CASE(apostrophe_d_de_locale_literal) { run(v_de); }
 
-int main(void) { tc_begin(); TC_RUN(apostrophe_d_c_locale_result_or_iph); TC_RUN(apostrophe_d_de_locale_result_or_iph); return tc_end(); }
+int main(void) { tc_begin(); TC_RUN(apostrophe_d_c_locale_literal); TC_RUN(apostrophe_d_de_locale_literal); return tc_end(); }

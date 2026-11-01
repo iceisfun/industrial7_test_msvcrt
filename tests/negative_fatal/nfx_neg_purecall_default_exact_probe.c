@@ -6,9 +6,12 @@
  * procs: 
  * crt:   >=80
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs R6025
- * note:  PROBES exact exit status of default pure virtual termination: abort path (3) on msvcr80..120, and on ucrtbase (believed _invoke_watson -> fast fail 0xC0000409). Only a guess.
+ * note:  Observed on Win10 22H2 19045 ucrtbase: the default _purecall ends in abort(); tc_begin() clears _CALL_REPORTFAULT
+ *        (child exit code 3, as on the msvcr80..120 branch), so the ucrtbase child restores it with tc_abort_default() and the
+ *        exit status is the fast-fail 0xC0000409. For msvcr80..120 the child does NOT restore the flag (flag cleared -> exit 3, the old
+ *        expectation); that branch is [unverified] (not run on the reference).
  */
 #include "tc.h"
 
@@ -25,6 +28,10 @@ TC_CASE(exact_status)
 int main(void)
 {
     tc_begin();
-    if (tc_child_name()) { _purecall(); return 77; }
+    if (tc_child_name()) {
+#if TC_CRT_VER >= 140
+        tc_abort_default();
+#endif
+        _purecall(); return 77; }
     TC_RUN(exact_status); return tc_end();
 }

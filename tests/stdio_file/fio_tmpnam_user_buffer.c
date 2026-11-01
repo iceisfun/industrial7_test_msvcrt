@@ -4,12 +4,21 @@
  * funcs: tmpnam
  * crt:   all
  * tier:  p1
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs tmpnam; C11 7.21.4.4
+ *        OBSERVED (Win10 22H2, class A): tmpnam(buf) returns buf holding a full temp path (e.g. C:\Users\ADMINI~1\AppData\Local\Temp\s62s.0); with the mingw L_tmpnam (14) buffers
+ *        overflowed and the process died 0xc0000005. Path length depends on %TEMP%.
  */
 #include "tc.h"
 #include <stdio.h>
 #include <string.h>
+
+/* UCRT tmpnam returns a full temp-dir path (observed 41 chars: C:\Users\..\Temp\s62s.0); ucrt <stdio.h> L_tmpnam is 260,
+ * mingw's is 14, which overflowed the buffer (AV). Use the UCRT size. */
+#if TC_CRT_VER >= 140
+#undef L_tmpnam
+#define L_tmpnam 260
+#endif
 
 TC_CASE(user_buffer)
 {

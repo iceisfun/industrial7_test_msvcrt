@@ -5,9 +5,11 @@
  * crt:   ucrtbase
  * tier:  p2
  * kind:  positive
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf/scanf; UCRT text forms 1.#INF 1.#IND 1.#QNAN, nan(ind) nan(snan)
  * note:  PROBE: UCRT scanf accepts the round-trip forms printf produced on old CRTs / documents (1.#INF, 1.#IND, 1.#QNAN, 1.#SNAN, nan(ind), nan(snan)).
+ *        Win10 22H2 ucrtbase (observed 2026-10-31, stable over 2 runs): the legacy spellings "1.#INF", "-1.#INF", "-1.#IND", "1.#QNAN" are no longer recognised: %lf converts only the leading "1."/"-1." (r==1, +-1.0, %n pos 2/3) and leaves "#..." unread.
+ *        The UCRT accepts only inf/infinity/nan/nan(...) (those cases pass). Windows deviates from the msvcrt-era behaviour the old test assumed.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -15,10 +17,10 @@
 static volatile const char *v;
 #define INFB 0x7FF0000000000000ULL
 
-TC_CASE(hash_inf) { double d = 0; int r; v = "1.#INF"; r = sscanf((const char *)v, "%lf", &d); CHECK_EQ_I(r, 1); CHECK_EQ_U(tc_dbits(d), INFB); }
-TC_CASE(neg_hash_inf) { double d = 0; int r; v = "-1.#INF"; r = sscanf((const char *)v, "%lf", &d); CHECK_EQ_I(r, 1); CHECK_EQ_U(tc_dbits(d), INFB | 0x8000000000000000ULL); }
-TC_CASE(neg_hash_ind) { double d = 0; int r; v = "-1.#IND"; r = sscanf((const char *)v, "%lf", &d); CHECK_EQ_I(r, 1); CHECK_IS_NAN(d); }
-TC_CASE(hash_qnan) { double d = 0; int r; v = "1.#QNAN"; r = sscanf((const char *)v, "%lf", &d); CHECK_EQ_I(r, 1); CHECK_IS_NAN(d); }
+TC_CASE(hash_inf) { double d = 0; int r; v = "1.#INF"; r = sscanf((const char *)v, "%lf", &d); CHECK_EQ_I(r, 1); CHECK_BITS_D(d, 1.0); }
+TC_CASE(neg_hash_inf) { double d = 0; int r; v = "-1.#INF"; r = sscanf((const char *)v, "%lf", &d); CHECK_EQ_I(r, 1); CHECK_BITS_D(d, -1.0); }
+TC_CASE(neg_hash_ind) { double d = 0; int r; v = "-1.#IND"; r = sscanf((const char *)v, "%lf", &d); CHECK_EQ_I(r, 1); CHECK_BITS_D(d, -1.0); }
+TC_CASE(hash_qnan) { double d = 0; int r; v = "1.#QNAN"; r = sscanf((const char *)v, "%lf", &d); CHECK_EQ_I(r, 1); CHECK_BITS_D(d, 1.0); }
 TC_CASE(nan_ind) { double d = 0; int r; v = "nan(ind)"; r = sscanf((const char *)v, "%lf", &d); CHECK_EQ_I(r, 1); CHECK_IS_NAN(d); }
 TC_CASE(nan_ind_sign) { double d = 0; int r; v = "nan(ind)"; r = sscanf((const char *)v, "%lf", &d); CHECK_EQ_I(r, 1); CHECK((tc_dbits(d) >> 63) == 1); }
 TC_CASE(nan_snan) { double d = 0; int r; v = "nan(snan)"; r = sscanf((const char *)v, "%lf", &d); CHECK_EQ_I(r, 1); CHECK_IS_NAN(d); }

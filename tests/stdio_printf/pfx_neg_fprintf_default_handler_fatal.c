@@ -34,6 +34,7 @@ TC_CASE(percent_n)    { DWORD c = 0; CHECK(tc_spawn_self("percentn", &c, 20000))
 static int child(const char *name)
 {
     int n = 0;
+    tc_iph_default();
     if (name[0] == 'n' && name[1] == 'u' && name[4] == 's') { fprintf(g_null_stream, "x"); return 77; }
     else {
         FILE *f = fopen(TMP, "w");

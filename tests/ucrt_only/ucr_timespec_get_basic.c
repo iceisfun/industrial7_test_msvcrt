@@ -2,11 +2,12 @@
  * id:    ucr_timespec_get_basic
  * area:  ucrt_only
  * funcs:
- * procs: timespec_get
+ * procs: _timespec64_get _timespec32_get
  * crt:   win10
  * tier:  p0
  * conf:  standard
  * ref:   C11 7.27.2.5 timespec_get; MS docs timespec_get, _timespec32_get, _timespec64_get
+ * note:  Called through the real export _timespec64_get (ucrtbase does not export "timespec_get"; it is an inline wrapper in <time.h>; observed GetProcAddress NULL).
  */
 #include "tc.h"
 
@@ -18,7 +19,7 @@ static tc_tsget64_t timespec_get_p, timespec64_get_p;
 static tc_tsget32_t timespec32_get_p;
 static void load(void)
 {
-    timespec_get_p = (tc_tsget64_t)tc_crt_proc("timespec_get");
+    timespec_get_p = (tc_tsget64_t)tc_crt_proc("_timespec64_get");   /* ucrtbase exports _timespec64_get/_timespec32_get; "timespec_get" is an inline wrapper */
     timespec64_get_p = (tc_tsget64_t)tc_crt_proc("_timespec64_get");
     timespec32_get_p = (tc_tsget32_t)tc_crt_proc("_timespec32_get");
 }

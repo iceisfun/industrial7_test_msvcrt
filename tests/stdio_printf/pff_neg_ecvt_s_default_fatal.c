@@ -19,13 +19,18 @@ TC_CASE(child_terminates)
     CHECK(ran);
     CHECK(code != 77);
     CHECK(code != 0);
+#if TC_CRT_VER >= 140
+    CHECK_EQ_U(code, TC_STATUS_FASTFAIL); /* observed Win10 22H2 19045 ucrtbase */
+#endif
 }
 
 int main(void)
 {
     tc_begin();
     if (tc_child_name()) {
-        int d, s; _ecvt_s(NULL, 10, 1.5, 3, &d, &s);
+        int d, s;
+        tc_iph_default(); /* mingw crt startup installs a no-op handler; restore the CRT default (fatal) */
+        _ecvt_s(NULL, 10, 1.5, 3, &d, &s);
         return 77;
     }
     TC_RUN(child_terminates);

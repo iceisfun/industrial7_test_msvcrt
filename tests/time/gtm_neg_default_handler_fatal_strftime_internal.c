@@ -30,6 +30,7 @@ int main(void)
 {
     tc_begin();
     if (tc_child_name()) {
+        tc_iph_default();  /* mingw startup installs a no-op handler; restore the CRT default (fast-fail) */
         char b[64]; volatile const void *tm = NULL;
         gett_t g = (gett_t)tc_crt_proc("_Gettnames"); sf_t s = (sf_t)tc_crt_proc("_Strftime");
         if (!g || !s) return 78;

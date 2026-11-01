@@ -8,6 +8,8 @@
  * conf:  documented
  * ref:   MS docs vswprintf, _vsnwprintf (count is in wide characters), vswprintf_s (buffer[0]=0 on failure), C11 7.29.2.7 vswprintf
  * note:  Guard wchar_t values after the permitted count must never be touched.
+ *        OBSERVED Win10 22H2 19045 ucrtbase (run twice): the raw worker with legacy options (0) returns -2 on overflow (the inline _vsnwprintf wrapper in the UCRT headers maps
+ *        negative results to -1); the old expectation -1 was for the wrapper, not the worker this test calls.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -27,7 +29,7 @@ TC_CASE(legacy_overflow)
 {
     wchar_t b[16]; int r; fill(b);
     r = cw(0, b, 4, L"%ls", L"abcdefgh");
-    CHECK_EQ_I(r, -1); CHECK(guard(b, 4));
+    CHECK_EQ_I(r, -2); CHECK(guard(b, 4));
 }
 TC_CASE(c99_truncation)
 {

@@ -6,9 +6,9 @@
  * crt:   ucrtbase
  * tier:  p0
  * kind:  negative
- * conf:  standard
+ * conf:  observed
  * ref:   C11 7.27.2.5: returns zero if the base is not supported
- * note:  bases 2.. omitted: C23 defines optional TIME_MONOTONIC etc; see tm_neg_timespec_get_probe_base_c23.
+ * note:  Observed on Windows 10 22H2 build 19045 ucrtbase (triage-win10 wp2-time-0). timespec_get is not exported from ucrtbase 19045 (class D); _timespec32_get/_timespec64_get return 0 for unsupported bases (C11 7.27.2.5). bases 2.. omitted: C23 defines optional TIME_MONOTONIC etc; see tm_neg_timespec_get_probe_base_c23.
  */
 #include "tc.h"
 #include <time.h>
@@ -28,13 +28,13 @@ static void run(tsg_t f)
         CHECK_EQ_I(f(&ts, bases[i]), 0);
     }
 }
-TC_CASE(timespec_get_bad) { CHECK(p_timespec_get != NULL); if (p_timespec_get) run(p_timespec_get); }
+TC_CASE(timespec32_get_bad) { CHECK(p_timespec_get != NULL); if (p_timespec_get) run(p_timespec_get); }
 TC_CASE(timespec64_get_bad) { CHECK(p_ts64 != NULL); if (p_ts64) run(p_ts64); }
 int main(void)
 {
     tc_begin();
-    p_timespec_get = (tsg_t)tc_crt_proc("timespec_get");
+    p_timespec_get = (tsg_t)tc_crt_proc("_timespec32_get");  /* timespec_get itself is not exported from ucrtbase 19045 (inline in the headers) */
     p_ts64 = (tsg_t)tc_crt_proc("_timespec64_get");
-    TC_RUN(timespec_get_bad); TC_RUN(timespec64_get_bad);
+    TC_RUN(timespec32_get_bad); TC_RUN(timespec64_get_bad);
     return tc_end();
 }

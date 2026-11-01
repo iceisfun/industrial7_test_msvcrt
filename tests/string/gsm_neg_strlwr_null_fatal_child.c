@@ -51,7 +51,7 @@ int main(void)
     TC_LOAD_PROC(_strlwr_s); TC_LOAD_PROC(_strupr_s); TC_LOAD_PROC(_strset_s); TC_LOAD_PROC(_wcsset_s);
     if ((c = tc_child_name()) != NULL) {
         if (c[0] == 'i') { tc_iph_install(); return trigger(c[1] - '0') == 22 ? 77 : 78; }
-        trigger(c[1] - '0'); return 77;
+        tc_iph_default(); trigger(c[1] - '0'); return 77;
     }
     if (!(tc_p__strlwr_s && tc_p__strupr_s && tc_p__strset_s && tc_p__wcsset_s)) TC_RUN(missing_procs);
     else

@@ -36,6 +36,7 @@ int main(void)
         char d[_MAX_DRIVE], di[_MAX_DIR], f[_MAX_FNAME], e[_MAX_EXT];
         sp_t sp = (sp_t)tc_crt_proc("_splitpath_s");
         if (!sp) return 78;
+        tc_iph_default();
         sp(NULL, d, _MAX_DRIVE, di, _MAX_DIR, f, _MAX_FNAME, e, _MAX_EXT);
         return 77;
     }

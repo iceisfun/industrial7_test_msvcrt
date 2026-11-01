@@ -8,8 +8,13 @@
  * kind:  negative
  * conf:  inferred
  * ref:   MS docs _get_current_locale (returns a locale object for the current locale); _create_locale objects are independent of later setlocale
+ * note:  Win10 triage (class A): "zz" is NOT an invalid locale name on Windows 10 19045 (setlocale(LC_ALL,"zz") returns "zz": any well-formed BCP-47-style
+ *        tag is accepted as a custom locale), so the failing name is now "zz_nowhere" (observed NULL). Observed on Windows 10 22H2 build 19045.
  * note:  Inferred: the object is a copy at the time of the call, so a later setlocale does not change its classification.
  *        In C locale 0xE9 is not alpha and _toupper_l leaves it unchanged.
+ *        [scope] observed on ucrtbase 19045 only; the legacy CRTs listed in crt: are [unverified] until the P3 runs.
+ *        [env] user-default locale en-US, build 19045; not stable on a VM with another user locale/NLS data.
+ *        [env] the name "zz" is a valid locale name on build 19045 (observed); "zz_nowhere" is rejected (observed).
  */
 #include "tc.h"
 #include <ctype.h>
@@ -18,7 +23,7 @@
 TC_DECL_PROC(int, _isalpha_l, (int, _locale_t));
 TC_DECL_PROC(int, _toupper_l, (int, _locale_t));
 static const char *volatile n_en = "English_United States.1252";
-static const char *volatile n_bad = "zz";
+static const char *volatile n_bad = "zz_nowhere";
 static volatile int ch = 0xE9;
 static _locale_t snap;
 

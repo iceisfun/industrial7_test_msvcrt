@@ -6,12 +6,15 @@
  * procs: fwscanf_s _snwscanf_s _sscanf_s_l sscanf_s swscanf_s
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90 msvcr80
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs scanf_s (return value, errno and buffer state after a buffer-too-small failure are not precisely documented)
  * note:  PROBE. With a returning invalid-parameter handler, a size argument too small for the converted data across the wide
  *        file (fwscanf_s), counted (_snwscanf_s), locale (_sscanf_s_l) and %S/%C (sscanf_s, swscanf_s) variants:
  *        expected return 0 (could be EOF), errno ERANGE (could be EINVAL or untouched), and the destination's first element set to 0
  *        (string emptied) for %s. Each guess is its own case.
+ *        CORRECTED for Win10 22H2 ucrtbase (observed 2026-10-31): a too-small _s destination returns 0 with errno=ENOMEM (12) (not ERANGE) and does NOT call the invalid parameter handler (count 0).
+ *        MS docs do not document either. Stable (2 runs).
+ *        Observed on Win10 22H2 ucrtbase only; the same expectation on the other CRTs (ucrtbase msvcr120 msvcr110 msvcr100 msvcr90 msvcr80) is [unverified] and must be confirmed when those CRTs are run in the VM.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -64,7 +67,7 @@ TC_CASE(fwscanf_s_errno_erange)
 {
     wchar_t a[8]; FILE *f; fillw(a); if (!HAVE_P(FWS)) TC_SKIP("not exported");
     f = mkfile(); CHECK(f != NULL); if (!f) return;
-    CHECK(tc_iph_install()); vf = L"%s"; errno = 0; (void)FWS(f, vf, a, (unsigned)3); CHECK_EQ_I(errno, ERANGE);
+    CHECK(tc_iph_install()); vf = L"%s"; errno = 0; (void)FWS(f, vf, a, (unsigned)3); CHECK_EQ_I(errno, ENOMEM);
     fclose(f); DeleteFileA(FN);
 }
 TC_CASE(fwscanf_s_emptied)
@@ -78,7 +81,7 @@ TC_CASE(snwscanf_s_ret0_erange)
 {
     wchar_t a[8]; int n; fillw(a); if (!HAVE_P(SNWS)) TC_SKIP("not exported");
     CHECK(tc_iph_install()); errno = 0; vw = L"abcdef"; n = SNWS(vw, 6, L"%s", a, (unsigned)3);
-    CHECK_EQ_I(n, 0); CHECK_EQ_I(errno, ERANGE);
+    CHECK_EQ_I(n, 0); CHECK_EQ_I(errno, ENOMEM);
 }
 TC_CASE(snwscanf_s_emptied)
 {
@@ -89,19 +92,19 @@ TC_CASE(sscanf_s_l_ret0_erange)
 {
     char a[8]; int n, i; for (i = 0; i < 8; i++) a[i] = 'Z'; if (!HAVE_P(SSL)) TC_SKIP("not exported");
     CHECK(tc_iph_install()); errno = 0; vs = "abcdef"; n = SSL(vs, "%s", NULL, a, (unsigned)3);
-    CHECK_EQ_I(n, 0); CHECK_EQ_I(errno, ERANGE);
+    CHECK_EQ_I(n, 0); CHECK_EQ_I(errno, ENOMEM);
 }
 TC_CASE(sscanf_S_ret0_erange)
 {
     wchar_t a[4]; int n, i; for (i = 0; i < 4; i++) a[i] = L'Z'; if (!HAVE_P(SS)) TC_SKIP("not exported");
     CHECK(tc_iph_install()); errno = 0; vs = "abc"; n = SS(vs, "%S", a, (unsigned)2);
-    CHECK_EQ_I(n, 0); CHECK_EQ_I(errno, ERANGE);
+    CHECK_EQ_I(n, 0); CHECK_EQ_I(errno, ENOMEM);
 }
 TC_CASE(swscanf_S_ret0_erange)
 {
     char a[4]; int n, i; for (i = 0; i < 4; i++) a[i] = 'Z'; if (!HAVE_P(SWS)) TC_SKIP("not exported");
     CHECK(tc_iph_install()); errno = 0; vw = L"abc"; n = SWS(vw, L"%S", a, (unsigned)2);
-    CHECK_EQ_I(n, 0); CHECK_EQ_I(errno, ERANGE);
+    CHECK_EQ_I(n, 0); CHECK_EQ_I(errno, ENOMEM);
 }
 int main(void)
 {

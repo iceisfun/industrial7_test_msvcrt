@@ -5,9 +5,10 @@
  * crt:   >=90
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _sprintf_p (count is buffer capacity including the terminator; -1 on error)
- * note:  PROBE: capacities 1..3 cannot hold "abc"+NUL so the call returns -1; capacity >= 4 returns 3. Whenever a call succeeds its result is <= count-1 and the terminator is at buf[result]. Count 0 -> -1 is its own case (also probed in pfq_neg_probe_sprintf_p_zero_size). Guard bytes beyond count must survive. Extreme counts (INT_MAX+1, SIZE_MAX) are not exercised: the caller is trusted with the real size.
+ * note:  PROBE: capacities 1..3 cannot hold "abc"+NUL so the call returns -2 on ucrtbase (-1 on count 0); capacity >= 4 returns 3. Whenever a call succeeds its result is <= count-1 and the terminator is at buf[result]. Count 0 -> -1 is its own case (also probed in pfq_neg_probe_sprintf_p_zero_size). Guard bytes beyond count must survive. Extreme counts (INT_MAX+1, SIZE_MAX) are not exercised: the caller is trusted with the real size.
+ *        A (test bug): observed _sprintf_p returns -2 for a too-small non-zero count on Win10 22H2 19045 (count 0 still returns -1).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -64,7 +65,7 @@ TC_CASE(count_one_nonempty)
     char b[16]; int r;
     fillc(b, 16); tc_iph_count = 0;
     r = SP(b, 1, F, Xs);
-    CHECK_EQ_I(r, -1);
+    CHECK_EQ_I(r, -2);
     CHECK(guardc(b, 1, 16));
 }
 TC_CASE(count_zero)
@@ -81,7 +82,7 @@ TC_CASE(sweep_counts)
     for (n = 1; n <= 8; n++) {
         fillc(b, 16);
         r = SP(b, (size_t)n, "%1$s", "abc");
-        if (n < 4) CHECK_EQ_I(r, -1);
+        if (n < 4) CHECK_EQ_I(r, -2);
         else { CHECK_EQ_I(r, 3); CHECK_STR(b, "abc"); }
         if (r >= 0) { CHECK(r <= n - 1); CHECK_EQ_I(b[r], 0); }
         CHECK(guardc(b, n, 16));

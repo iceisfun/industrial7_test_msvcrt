@@ -5,60 +5,67 @@
  * crt:   ucrtbase
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _itoa, _itow family (non-_s versions have no documented error returns)
- * note:  PROBES: with the invalid-parameter handler installed, an out-of-range radix (1, 37, 0) makes the function fire the handler once,
- *        return its buffer argument and leave an empty string; a NULL buffer fires the handler and returns NULL without crashing (child process).
+ * note:  OBSERVED (Win10 22H2 19045 ucrtbase, run twice; class C for radix 0/1/NULL): _ltow/_ultow/_i64tow/_ui64tow/_itow do not validate the radix or the
+ *        buffer. Radix 37 is accepted (buffer L"5", handler not called); radix 0 -> 0xC0000094 (divide by zero); radix 1 -> 0xC0000005 (runaway loop);
+ *        NULL buffer -> 0xC0000005. The original probe expected handler once + empty string + NULL-safe return. Each case runs in a child process.
  */
 #include "tc.h"
 #include <stdlib.h>
 
-static int radices[] = { 1, 37, 0 };
-static int child_main(const char *n);
-
+static volatile int vrad;
 static int child_main(const char *n)
 {
-    wchar_t *r;
+    wchar_t w[80];
     tc_iph_install();
-    if (n[0] == 'r') {   /* "radix": returns 77 if every call returned its buffer, emptied it and fired the handler once */
-        size_t i;
-        for (i = 0; i < 3; i++) {   /* first pass: handler counts only (most likely behaviour) */
-            wchar_t w[80]; int n0 = tc_iph_count;
-            _ltow(5, w, radices[i]); _ultow(5, w, radices[i]); _i64tow(5, w, radices[i]);
-            _ui64tow(5, w, radices[i]); _itow(5, w, radices[i]);
-            if (tc_iph_count - n0 != 5) return 90 + (int)i;
-        }
-        for (i = 0; i < 3; i++) {   /* second pass: return value and emptied buffer (more speculative) */
-            wchar_t w[80];
-            w[0] = L'z'; r = _ltow(5, w, radices[i]); if (r != w || w[0]) return 80 + (int)i;
-            w[0] = L'z'; r = _ultow(5, w, radices[i]); if (r != w || w[0]) return 80 + (int)i;
-            w[0] = L'z'; r = _i64tow(5, w, radices[i]); if (r != w || w[0]) return 80 + (int)i;
-            w[0] = L'z'; r = _ui64tow(5, w, radices[i]); if (r != w || w[0]) return 80 + (int)i;
-            w[0] = L'z'; r = _itow(5, w, radices[i]); if (r != w || w[0]) return 80 + (int)i;
+    if (n[0] == 'r' && n[1] == '3') {   /* "r37": every call returns its buffer holding L"5", no handler call, no errno */
+        wchar_t *r;
+        tc_iph_count = 0; vrad = 37;
+        w[0] = L'z'; r = _ltow(5, w, vrad); if (r != w || w[0] != L'5' || w[1]) return 80;
+        w[0] = L'z'; r = _ultow(5, w, vrad); if (r != w || w[0] != L'5' || w[1]) return 81;
+        w[0] = L'z'; r = _i64tow(5, w, vrad); if (r != w || w[0] != L'5' || w[1]) return 82;
+        w[0] = L'z'; r = _ui64tow(5, w, vrad); if (r != w || w[0] != L'5' || w[1]) return 83;
+        w[0] = L'z'; r = _itow(5, w, vrad); if (r != w || w[0] != L'5' || w[1]) return 84;
+        return tc_iph_count == 0 ? 77 : 85;
+    }
+    if (n[0] == 'r') {   /* "r0" / "r1": one call per function selected by n[2] */
+        vrad = n[1] - '0';
+        switch (n[2]) {
+        case 'a': _ltow(5, w, vrad); break;
+        case 'b': _ultow(5, w, vrad); break;
+        case 'c': _i64tow(5, w, vrad); break;
+        case 'd': _ui64tow(5, w, vrad); break;
+        default:  _itow(5, w, vrad); break;
         }
         return 77;
     }
-    r = _ultow(5, NULL, 10);
-    return r == NULL ? 77 : 78;
+    { wchar_t *volatile np = NULL; _ultow(5, np, 10); }
+    return 77;
 }
-TC_CASE(bad_radix)
+static void expect(const char *name, DWORD want)
 {
-    DWORD code = 0; int ran = tc_spawn_self("radix", &code, 20000);
+    DWORD code = 0; int ran = tc_spawn_self(name, &code, 20000);
     CHECK(ran);
-    CHECK_EQ_U(code, 77);   /* 80+i: radix[i] result/buffer wrong; 90+i: handler count wrong */
+    CHECK_EQ_U(code, want);
 }
-TC_CASE(null_buffer)
+/* observed Win10 22H2 ucrtbase: no radix/buffer validation in the non-_s wide routines. */
+TC_CASE(radix_37_accepted) { expect("r37", 77); }
+TC_CASE(radix_0_divide_by_zero)
 {
-    DWORD code = 0; int ran = tc_spawn_self("nullbuf", &code, 20000);
-    CHECK(ran);
-    CHECK_EQ_U(code, 77);
+    expect("r0a", 0xC0000094u); expect("r0b", 0xC0000094u); expect("r0c", 0xC0000094u); expect("r0d", 0xC0000094u); expect("r0e", 0xC0000094u);
 }
+TC_CASE(radix_1_access_violation)
+{
+    expect("r1a", 0xC0000005u); expect("r1b", 0xC0000005u); expect("r1c", 0xC0000005u); expect("r1d", 0xC0000005u); expect("r1e", 0xC0000005u);
+}
+TC_CASE(null_buffer_access_violation) { expect("nullbuf", 0xC0000005u); }
 
 int main(void)
 {
     const char *c;
     tc_begin();
     if ((c = tc_child_name())) return child_main(c);
-    TC_RUN(bad_radix); TC_RUN(null_buffer);
+    TC_RUN(radix_37_accepted); TC_RUN(radix_0_divide_by_zero); TC_RUN(radix_1_access_violation); TC_RUN(null_buffer_access_violation);
     return tc_end();
 }

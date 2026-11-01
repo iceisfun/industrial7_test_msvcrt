@@ -5,10 +5,12 @@
  * crt:   win10
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _getc_nolock, _putc_nolock
  * note:  PROBE: whether the UCRT nolock variants validate a NULL stream (EOF, EINVAL, invalid-parameter handler)
  *        rather than crashing.
+ *        OBSERVED (Win10 22H2, class C): _getc_nolock(NULL) validates (EOF, EINVAL, handler once); _putc_nolock(c, NULL) is unchecked and the child dies with
+ *        0xC0000005 (raw: code == 0 got=0xc0000005), so putc_nolock_null asserts the access violation.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -26,14 +28,16 @@ static int child_main(const char *n)
     if (tc_iph_count - c0 != 1) return 1;
     return errno == EINVAL ? 0 : 2;
 }
-static void run(const char *n)
+static void run(const char *n, DWORD want)
 {
     DWORD code = 99;
     CHECK(tc_spawn_self(n, &code, 20000));
-    CHECK_EQ_U(code, 0);
+    CHECK_EQ_U(code, want);
 }
-TC_CASE(getc_nolock_null) { run("a"); }
-TC_CASE(putc_nolock_null) { run("b"); }
+TC_CASE(getc_nolock_null) { run("a", 0); }
+/* Win10 22H2 ucrtbase: _fputc_nolock(c, NULL) does no parameter validation and faults (observed rc 0xc0000005);
+ * _fgetc_nolock(NULL) does validate (case above). Windows behaviour, so the case asserts the access violation. */
+TC_CASE(putc_nolock_null) { run("b", TC_STATUS_ACCESS_VIOLATION); }
 int main(void)
 {
     const char *c;

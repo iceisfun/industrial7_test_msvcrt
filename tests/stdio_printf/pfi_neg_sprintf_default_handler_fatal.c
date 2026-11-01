@@ -28,6 +28,7 @@ int main(void)
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
         char *volatile p = NULL; volatile int v = 1;
+        tc_iph_default(); /* mingw startup installs a no-op handler; restore the CRT default */
         sprintf(p, "%d", v);
         return 77; /* reached only if the CRT did not terminate */
     }

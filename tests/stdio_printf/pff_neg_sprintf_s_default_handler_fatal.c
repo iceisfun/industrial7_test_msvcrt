@@ -9,6 +9,7 @@
  * conf:  documented
  * ref:   MS docs Parameter validation: default invalid parameter handler terminates the process
  * note:  child process only. msvcrt.dll is covered separately by pff_neg_sprintf_s_default_handler_fatal_msvcrt_probe.
+ *        Win10 22H2 fix: the fatal child first calls tc_iph_default() (mingw crtexe installs a no-op invalid-parameter handler, so the default path was never reached).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -33,6 +34,7 @@ static int child_main(const char *name)
         n = xsprintf_s(d, 2, "%f", v);
         return n == -1 ? 77 : 2;
     }
+    tc_iph_default();       /* mingw startup installs a no-op handler; restore the CRT default */
     xsprintf_s(d, 2, "%f", v);
     return 77;              /* reached only if the CRT did not terminate */
 }

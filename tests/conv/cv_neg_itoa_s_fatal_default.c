@@ -20,7 +20,7 @@ int main(void)
 {
     const char *c; char b[16]; char *volatile nb = NULL; volatile size_t n3 = 3, n16 = 16, n0 = 0;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) {
+    if ((c = tc_child_name()) != NULL) { tc_iph_default();
         if (c[0] == 'n') _itoa_s(1, nb, n0, 10);
         else if (c[0] == 't') _itoa_s(12345, b, n3, 10);
         else { if (_itoa_s(1, b, n16, 10) != 0) return 5; }

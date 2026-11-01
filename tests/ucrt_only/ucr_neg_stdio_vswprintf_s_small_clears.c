@@ -6,9 +6,11 @@
  * crt:   win10
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs swprintf_s (buffer too small: buffer[0]=0, ERANGE, handler), _snwprintf (-1 on overflow, no write past count), C11 7.29.2.7 snprintf-like return via options bit 2
- * note:  The std-snprintf case uses the UCRT options bit _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR (2).
+ * note:  Win10 22H2 (observed): __stdio_common_vswprintf_s (swprintf_s) overflow -> -1, buffer[0]=0, ERANGE, one handler call (documented). The legacy options=0
+ *        overflow of __stdio_common_vswprintf returns -2 (the CRT headers' inline _vsnwprintf wrapper converts that to the documented -1), writes nothing past count,
+ *        no handler. The std-snprintf case is unchanged and passes.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -40,7 +42,7 @@ TC_CASE(legacy_no_overrun)
     for (i = 0; i < 8; i++) b[i] = L'S';
     tc_iph_count = 0;
     r = callw(0, b, 3, L"hello");
-    CHECK_EQ_I(r, -1);
+    CHECK_EQ_I(r, -2);   /* observed on Win10 22H2: the raw __stdio_common_vswprintf returns -2 on overflow (the inline _vsnwprintf wrapper maps negatives to -1) */
     for (i = 3; i < 8; i++) CHECK_EQ_I(b[i], L'S');
     CHECK_EQ_I(tc_iph_count, 0);
 }

@@ -6,8 +6,12 @@
  * crt:   >=100
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _get_errno: pValue NULL -> invalid parameter handler, EINVAL
+ * note:  Observed on Win10 22H2 19045 ucrtbase: _get_errno(NULL) returns EINVAL and calls the invalid-parameter handler once,
+ *        but errno stays 0 (the old expectation errno==EINVAL was wrong). DEVIATES from MS docs _get_errno ("If execution is
+ *        allowed to continue, this function sets errno to EINVAL and returns EINVAL"): the return value and handler match, errno
+ *        is not set. Stable across runs.
  */
 #include "tc.h"
 #include <errno.h>
@@ -18,7 +22,7 @@ TC_CASE(null_ptr)
 {
     errno_t r; tc_iph_count = 0; errno = 0;
     r = tc_p__get_errno(NULL);
-    CHECK_EQ_I(r, EINVAL); CHECK_EQ_I(tc_iph_count, 1); CHECK_EQ_I(errno, EINVAL);
+    CHECK_EQ_I(r, EINVAL); CHECK_EQ_I(tc_iph_count, 1); CHECK_EQ_I(errno, 0);   /* observed: _get_errno reports EINVAL via its return value and the handler only; it leaves errno alone */
 }
 TC_CASE(valid_ptr_no_handler)
 {

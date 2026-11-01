@@ -7,6 +7,9 @@
  * kind:  negative
  * conf:  documented
  * ref:   MS docs sprintf_s, Parameter validation: overflow under default handler terminates
+ *        HARNESS FIX (class F, Win10 22H2 x64 (19045) ucrtbase.dll observed, zzp_probe5/6: every printf/scanf/strcpy_s "default handler" child exited 0x4d = survived): the mingw-w64 startup code installs
+ *        a no-op invalid-parameter handler (call to _set_invalid_parameter_handler(__mingw_invalidParameterHandler) in main's crt startup), so the CRT's own
+ *        default (terminate) never ran. The child now calls tc_iph_default() (= _set_invalid_parameter_handler(NULL)) first. Test expectations unchanged.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -18,6 +21,7 @@
 static int child_main(const char *name)
 {
     char b[32]; volatile void *p = (void *)(size_t)0xABC; int r;
+    tc_iph_default();
     if (name[0] == 'o') { r = sprintf_s(b, 17, "%p", p); return r == 16 ? 77 : 2; }
     sprintf_s(b, 10, "%p", p);
     return 77;

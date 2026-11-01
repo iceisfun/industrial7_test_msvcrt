@@ -13,6 +13,10 @@
 #include <string.h>
 #include <wchar.h>
 #include <locale.h>
+/* mingw headers do not declare these; without prototypes the returned pointer is truncated to int (test defect) */
+char *__cdecl _strlwr_l(char *, _locale_t);
+char *__cdecl _strupr_l(char *, _locale_t);
+wchar_t *__cdecl _wcslwr_l(wchar_t *, _locale_t);
 
 static _locale_t l1252, lc;
 

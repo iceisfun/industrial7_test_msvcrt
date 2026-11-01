@@ -9,11 +9,14 @@
  * ref:   MS docs _tempnam, _wtempnam: returns malloc'd name of a file that does not exist; free with free()
  * note:  The TMP environment variable overrides the dir argument and the CRT keeps its own environment copy,
  *        so no assertion is made about the directory part. Complements fio_tempnam_dir_prefix.
+ *        Win10 22H2 19045 (diagnosed): the baseline CRASH (0xC0000005 in the first case) was a test bug: <stdio.h> was not included, so _tempnam was implicitly
+ *        declared returning int and the 64-bit pointer was truncated. Including <stdio.h> fixes it (class A, no expectation changed).
  */
 #include "tc.h"
 #include <io.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <stdio.h>      /* _tempnam is declared here; without it the implicit int return truncates the pointer and crashes */
 #include <stdlib.h>
 #include <string.h>
 #include <wchar.h>

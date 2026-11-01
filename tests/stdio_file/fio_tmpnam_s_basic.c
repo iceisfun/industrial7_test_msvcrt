@@ -5,14 +5,19 @@
  * procs: tmpnam_s
  * crt:   >=80
  * tier:  p1
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs tmpnam_s, _wtmpnam_s (L_tmpnam_s)
+ *        OBSERVED (Win10 22H2, class A): mingw header L_tmpnam_s is too small for UCRT, which returns full temp paths; tmpnam_s(buf,260) == 0, sizes 25/16/10 give ERANGE
+ *        (raw: tc_p_tmpnam_s(a, L_tmpnam_s) == 0 got=34). Names depend on %TEMP% (length), not asserted beyond non-empty/distinct.
  */
 #include "tc.h"
 #include <stdio.h>
 #include <string.h>
 
-#ifndef L_tmpnam_s
+/* UCRT tmpnam_s needs room for a full temp-dir path (observed names like C:\Users\..\Temp\u62s.0, 43 chars;
+ * ucrt <stdio.h> has L_tmpnam_s == 260). mingw's own L_tmpnam_s (small) is the wrong constant for ucrtbase: ERANGE (34). */
+#if TC_CRT_VER >= 140
+#undef L_tmpnam_s
 #define L_tmpnam_s 260
 #endif
 TC_DECL_PROC(int, tmpnam_s, (char *, size_t));

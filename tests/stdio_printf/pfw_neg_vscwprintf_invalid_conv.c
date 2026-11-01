@@ -5,12 +5,10 @@
  * funcs: _scwprintf
  * crt:   >=140
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   UCRT printf validation: unknown conversion specifier / trailing '%' -> invalid parameter handler, -1, EINVAL
- * note:  PROBE. Probes that the length-only (non-_s) wide formatter rejects an unknown conversion ('%y', '%5.3k') and a trailing '%'
- *        with -1/EINVAL via the invalid parameter handler on ucrtbase. Legacy (msvcr80-120) non-secure tables may instead print the
- *        character literally, so this is restricted to ucrtbase. The _l variant is called through __stdio_common_vswprintf.
- *        Control cases around it are certain.
+ * note:  Observed on Windows 10 22H2 ucrtbase: the length-only non-secure _scwprintf (and __stdio_common_vswprintf with the count-only option 6) does not validate:
+ *        L"ab%y" -> 3, L"%" -> 0, L"%5.3k" -> 1, locale variant of L"ab%y" -> 3; errno stays 0, no handler call. Control and recovery cases unchanged.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -25,10 +23,10 @@ static const wchar_t * volatile f_k = L"%5.3k";
 static const wchar_t * volatile f_ok = L"ab%dcd";
 
 TC_CASE(control) { CHECK_EQ_I(_scwprintf(f_ok, 42), 6); }
-TC_CASE(unknown_y) { int r; tc_iph_count = 0; errno = 0; r = _scwprintf(f_y); CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1); }
-TC_CASE(trailing_percent) { int r; tc_iph_count = 0; errno = 0; r = _scwprintf(f_pct); CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1); }
-TC_CASE(unknown_k_with_width) { int r; tc_iph_count = 0; errno = 0; r = _scwprintf(f_k, 1); CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); }
-TC_CASE(locale_variant_unknown) { int r; tc_iph_count = 0; errno = 0; r = scwl(f_y, NULL); CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); }
+TC_CASE(unknown_y) { int r; tc_iph_count = 0; errno = 0; r = _scwprintf(f_y); CHECK_EQ_I(r, 3); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0); }
+TC_CASE(trailing_percent) { int r; tc_iph_count = 0; errno = 0; r = _scwprintf(f_pct); CHECK_EQ_I(r, 0); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0); }
+TC_CASE(unknown_k_with_width) { int r; tc_iph_count = 0; errno = 0; r = _scwprintf(f_k, 1); CHECK_EQ_I(r, 1); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0); }
+TC_CASE(locale_variant_unknown) { int r; tc_iph_count = 0; errno = 0; r = scwl(f_y, NULL); CHECK_EQ_I(r, 3); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0); }
 TC_CASE(recovers) { tc_iph_count = 0; (void)_scwprintf(f_y); CHECK_EQ_I(_scwprintf(f_ok, 42), 6); }
 int main(void)
 {

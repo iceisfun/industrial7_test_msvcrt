@@ -3,13 +3,13 @@
  * area:  stdio_printf
  * kind:  positive
  * funcs: _vsprintf_p _set_printf_count_output _get_printf_count_output
- * crt:   >=90
+ * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _set_printf_count_output (enables %n); positional %n in _vsprintf_p is not documented separately
- * note:  PROBES that after _set_printf_count_output(1), '%1$n' in _vsprintf_p stores the character count so far (3 for "abc%1$n"),
- *        returns 3 and does not call the invalid-parameter handler. Setting restored to 0 afterwards. Isolated because it writes through
- *        a pointer taken from the va_list.
+ * note:  Observed on Windows 10 22H2: even after _set_printf_count_output(1) (getter returns 1), the _vsprintf_p family rejects %n, positional
+ *        or not (reference probe: plain "abc%n" through __stdio_common_vsprintf_p is also rejected): returns -1, errno EINVAL, one handler call,
+ *        and the target int is left unchanged.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -28,13 +28,13 @@ TC_CASE(positional_n_enabled)
     char b[32]; int n = 12345, r; const char * volatile f = "abc%1$n";
     if (!def_zero) TC_SKIP("count output already enabled");
     _set_printf_count_output(1);
+    CHECK_EQ_I(_get_printf_count_output(), 1);
     tc_iph_count = 0;
     r = cp(b, sizeof b, f, &n);
     _set_printf_count_output(0);
-    CHECK_EQ_I(r, 3);
-    CHECK_EQ_I(n, 3);
-    CHECK_EQ_I(tc_iph_count, 0);
-    CHECK_STR(b, "abc");
+    CHECK_EQ_I(r, -1);
+    CHECK_EQ_I(n, 12345);
+    CHECK_EQ_I(tc_iph_count, 1);
 }
 int main(void)
 {

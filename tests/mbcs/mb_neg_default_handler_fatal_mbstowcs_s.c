@@ -32,6 +32,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();   /* mingw startup installs a no-op handler; restore the CRT default (fatal) */
         size_t r = 0; char b[2]; static const char *volatile nul = NULL;
         static const wchar_t *volatile wide = L"toolong";
         mbstowcs_s_t pm = (mbstowcs_s_t)tc_crt_proc("mbstowcs_s"); wcstombs_s_t pw = (wcstombs_s_t)tc_crt_proc("wcstombs_s");

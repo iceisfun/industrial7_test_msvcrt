@@ -38,6 +38,7 @@ int main(void)
     const char *c; tc_begin();
     if ((c = tc_child_name()) != NULL) {
         char b[4];
+        tc_iph_default(); /* mingw startup installs a no-op handler; restore the CRT default */
         if (tc_strequ(c, "strunc")) sprintf_s(b, sizeof b, "%s", longstr);
         else if (tc_strequ(c, "snull")) sprintf_s(nullbuf, 4, "x");
         else if (tc_strequ(c, "fnull")) fprintf(nullstream, "x");

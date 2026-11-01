@@ -6,9 +6,10 @@
  * procs: feholdexcept fesetenv fetestexcept feraiseexcept
  * crt:   ucrtbase msvcr120
  * tier:  p1
- * conf:  documented
+ * conf:  observed
  * ref:   C11 7.6.4.2 (feholdexcept saves the environment, clears flags, installs a non-stop mode, if available); MS docs feholdexcept, _controlfp (unmasked exceptions raise SEH float exceptions)
- * note:  After feholdexcept a previously unmasked divide-by-zero must not trap. The control child (no feholdexcept) must die with
+ * note:  B: deviates from C11 7.6.4.2 (feholdexcept installs a non-stop mode; masking is available on x64). Observed on Win10 19045 ucrtbase (FMA3/AVX2 CPU, x64): with ZERODIVIDE unmasked, feholdexcept returns 1 and leaves ZERODIVIDE unmasked (probe cw after=0x80017), so the child asserts rc != 0 AND ZERODIVIDE still unmasked (return 21; 24 if rc != 0 but the exception got masked; 23 if rc == 0). For TC_CRT_VER < 140 (msvcr120) the original expectation (hold prevents the trap, child returns 77) is kept [unverified on msvcr120].
+ *        Original text: After feholdexcept a previously unmasked divide-by-zero must not trap. The control child (no feholdexcept) must die with
  *        STATUS_FLOAT_DIVIDE_BY_ZERO (0xC000008E): that is Windows SEH behaviour (documented), not ISO C, hence conf documented.
  */
 #include "tc.h"
@@ -28,11 +29,15 @@ typedef struct { unsigned long w[4]; } tc_fenv;
 typedef int (__cdecl *hold_t)(tc_fenv *);
 static hold_t p_hold;
 
-TC_CASE(hold_prevents_trap)
+TC_CASE(hold_unmasked_behaviour)
 {
     if (!(p_hold)) TC_SKIP("fenv function not exported");
     DWORD code = 0; int ran = tc_spawn_self("hold", &code, 20000);
-    CHECK(ran); CHECK_EQ_U(code, 77);
+#if TC_CRT_VER >= 140
+    CHECK(ran); CHECK_EQ_U(code, 21);   /* B: rc != 0 and ZERODIVIDE stays unmasked (observed ucrtbase) */
+#else
+    CHECK(ran); CHECK_EQ_U(code, 77);   /* original: hold masks the trap [unverified on msvcr120] */
+#endif
 }
 TC_CASE(without_hold_traps)
 {
@@ -43,9 +48,10 @@ TC_CASE(without_hold_traps)
 TC_CASE(hold_clears_flags)
 {
     tc_fenv env; unsigned int old = _controlfp(0, 0);
-    if (!p_hold || !p_raise || !p_test) TC_SKIP("fenv not exported");
-    _clearfp();
-    CHECK_EQ_I(p_raise(FE_INEXACT | FE_OVERFLOW), 0);
+    if (!p_hold || !p_test) TC_SKIP("fenv not exported");
+    _controlfp(_MCW_EM, _MCW_EM); _clearfp();      /* feraiseexcept is not exported by ucrtbase: raise flags by arithmetic */
+    v_sink = v_one / v_zero; v_sink = v_max * v_max;
+    CHECK((p_test(FE_ALL_EXCEPT) & (FE_DIVBYZERO | FE_OVERFLOW)) == (FE_DIVBYZERO | FE_OVERFLOW));
     CHECK_EQ_I(p_hold(&env), 0);
     CHECK_EQ_I(p_test(FE_ALL_EXCEPT), 0);
     _controlfp(old, _MCW_EM | _MCW_RC); _clearfp();
@@ -60,14 +66,21 @@ int main(void)
         _clearfp();
         _controlfp(0, _EM_ZERODIVIDE);
         if (c[0] == 'h') {
-            if (p_hold(&env) != 0) return 21;
+            int rc = p_hold(&env);
+#if TC_CRT_VER >= 140
+            if (rc == 0) return 23;
+            if (_controlfp(0, 0) & _EM_ZERODIVIDE) return 24;   /* masked: not the observed behaviour */
+            return 21;
+#else
+            if (rc != 0) return 21;
             v_sink = v_one / v_zero;
             if (_controlfp(0, 0) & _EM_ZERODIVIDE) return 77;
             return 22;
+#endif
         }
         v_sink = v_one / v_zero;
         return 77;
     }
-    TC_RUN(hold_prevents_trap); TC_RUN(without_hold_traps); TC_RUN(hold_clears_flags);
+    TC_RUN(hold_unmasked_behaviour); TC_RUN(without_hold_traps); TC_RUN(hold_clears_flags);
     return tc_end();
 }

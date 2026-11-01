@@ -24,7 +24,7 @@ int main(void)
 {
     int key = 1;
     tc_begin();
-    if (tc_child_name()) { void *r = bsearch(&key, NULL, 3, sizeof(int), cmp); tc_write("POST-CALL-MARKER\n"); return r ? 1 : 77; }
+    if (tc_child_name()) { void *r; tc_iph_default(); r = bsearch(&key, NULL, 3, sizeof(int), cmp); tc_write("POST-CALL-MARKER\n"); return r ? 1 : 77; }
     TC_RUN(child_terminates);
     return tc_end();
 }

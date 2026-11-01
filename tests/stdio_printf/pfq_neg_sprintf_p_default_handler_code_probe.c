@@ -10,6 +10,7 @@
  * note:  PROBES (a) the exact exit status of the default invalid-parameter path: expected 0xC0000417 (Watson / old CRTs) or 0xC0000409
  *        (__fastfail, UCRT on Win8+); (b) a positional gap ("%1$d %3$d") with the default handler is treated as invalid -> same fatal status;
  *        (c) an unknown conversion character ("%1$y") is likewise invalid -> fatal status.
+ *        Win10 22H2 fix: child calls tc_iph_default() first (mingw crtexe installs a no-op handler).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -23,7 +24,7 @@ static int cp(char *b, size_t n, const char *f, ...)
 }
 static int child_main(const char *c)
 {
-    char buf[32]; char * volatile nb = NULL; const char * volatile gap = "%1$d %3$d"; const char * volatile bad = "%1$y";
+    char buf[32]; char * volatile nb = NULL; tc_iph_default(); const char * volatile gap = "%1$d %3$d"; const char * volatile bad = "%1$y";
     if (tc_strequ(c, "exact")) cp(nb, 10, "%1$d", 1);
     else if (tc_strequ(c, "gap")) { int r = cp(buf, sizeof buf, gap, 1, 2, 3); return r < 0 ? 78 : 77; }
     else if (tc_strequ(c, "bad_spec")) cp(buf, sizeof buf, bad, 1);

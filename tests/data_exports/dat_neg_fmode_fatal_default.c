@@ -30,6 +30,7 @@ int main(void)
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
         int *volatile p = NULL; volatile int bad = 0x1234; int m;
+        tc_iph_default();
         if (c[0] == 'g') _get_fmode(p); else _set_fmode(bad);
         (void)m;
         return 77;

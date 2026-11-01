@@ -24,6 +24,7 @@ int main(void)
     const char *c; tc_begin();
     if ((c = tc_child_name()) != NULL) {
         char b[16]; volatile int x = 0;
+        tc_iph_default(); /* mingw startup installs a no-op handler; restore the CRT default */
         if (c[0] == 'n' && c[1] == 'u') sprintf(b, nullfmt);
         else sprintf(b, "%n", (int *)&x);
         return 77;

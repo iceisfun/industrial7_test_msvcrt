@@ -8,6 +8,7 @@
  * conf:  documented
  * ref:   MS docs Parameter Validation; sprintf_s ("invalid parameter handler is invoked"); default handler terminates the process
  * note:  Child-process tests. Exact status is in pfu_neg_default_handler_sprintf_s_status_probe. tc_begin suppresses abort UI. A control child proves the exe path works (returns 77).
+ *        Win10 22H2 fix: fatal children call tc_iph_default() first (mingw crtexe installs a no-op invalid-parameter handler).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -24,7 +25,8 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
-        char b[16]; wchar_t w[4]; char *volatile nb = NULL; volatile size_t two = 2, one = 1, ten = 10, sixteen = 16;
+        char b[16]; wchar_t w[4]; if (!(c[0] == 'c' && c[1] == 'o')) tc_iph_default();
+        char *volatile nb = NULL; volatile size_t two = 2, one = 1, ten = 10, sixteen = 16;
         if (c[0] == 'c' && c[1] == 'o') { int r = sprintf_s(b, sixteen, "abc"); return r == 3 ? 77 : 78; }
         if (c[0] == 's') sprintf_s(b, two, "abc");
         else if (c[0] == 'n') sprintf_s(nb, ten, "x");

@@ -2,13 +2,14 @@
  * id:    pfx_probe_fprintf_ccs_utf8_nonascii_narrow
  * area:  stdio_printf
  * funcs: fprintf fopen fclose
- * crt:   >=100
+ * crt:   >=140
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs fopen (ccs=UTF-8 writes a BOM; stream is wide-oriented)
- * note:  PROBE: narrow fprintf of bytes C3 A9 to a "w, ccs=UTF-8" stream in the C locale. Guess: each narrow byte is
- *        widened one-to-one (C locale) and re-encoded as UTF-8, giving C3 83 C2 A9 after the EF BB BF BOM, return 2.
- *        The alternative is -1/EILSEQ. Observed bytes are printed as TC INFO.
+ * note:  PROBE: narrow fprintf of bytes C3 A9 to a "w, ccs=UTF-8" stream in the C locale. OBSERVED on Win10 22H2 19045: the narrow write of non-ASCII bytes fails (return -1) and only the
+ *        EF BB BF BOM reaches the file. errno is EINVAL. Observed bytes are printed as TC INFO.
+ *        crt narrowed to ucrtbase: observed only there [msvcr100..120 unverified].
+ *        A (test bug): observed r == -1 and file == BOM only.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -38,13 +39,14 @@ TC_CASE(narrow_bytes)
     if (!f) return;
     errno = 0;
     r = fprintf(f, "%s", str);
-    CHECK_EQ_I(r, 2);
+    CHECK_EQ_I(r, -1);
+    CHECK_EQ_I(errno, EINVAL);
     fclose(f);
     n = slurp(b, sizeof b); info(b, n);
-    CHECK_EQ_U(n, 7);
-    if (n == 7) {
-        static const unsigned char want[] = { 0xEF, 0xBB, 0xBF, 0xC3, 0x83, 0xC2, 0xA9 };
-        CHECK_MEM(b, want, 7);
+    CHECK_EQ_U(n, 3);
+    if (n == 3) {
+        static const unsigned char want[] = { 0xEF, 0xBB, 0xBF };
+        CHECK_MEM(b, want, 3);
     }
     DeleteFileA(path);
 }

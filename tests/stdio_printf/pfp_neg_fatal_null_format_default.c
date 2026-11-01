@@ -25,6 +25,7 @@ static int child_main(const char *name)
         r = sprintf_s(b, 4, "%p", p);
         return r == -1 ? 77 : 3;
     }
+    tc_iph_default(); /* mingw startup installs a no-op handler; restore the CRT default (fatal) */
     if (name[0] == 'n') { sprintf(b, f); return 77; }
     sprintf_s(b, 4, "%p", p);        /* small_buf */
     return 77;

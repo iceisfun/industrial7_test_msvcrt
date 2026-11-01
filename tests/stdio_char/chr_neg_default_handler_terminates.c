@@ -8,6 +8,8 @@
  * conf:  documented
  * ref:   MS docs Parameter validation
  * note:  Children via tc_spawn_self; the parent never calls the failing functions. Streams on NUL need no temp files.
+ *        HARNESS FIX (class F, Win10 22H2): mingw crt2.o installs a no-op invalid-parameter handler at startup, so the child survived (exit 77 instead of
+ *        0xC0000409); the child now calls tc_iph_default() (tc.h) to restore the CRT default before the call under test.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -22,6 +24,7 @@ TC_CASE(ungetc_null) { spawn("ungetc"); }
 static int child(const char *c)
 {
     volatile FILE *np = NULL; volatile const char *ns = NULL; volatile char *nb = NULL; FILE *f;
+    tc_iph_default();  /* undo mingw startup no-op handler: this test is about the CRT default */
     if (c[1]=='g' && c[4]=='c') (void)fgetc((FILE *)np);
     else if (c[1]=='p' && c[4]=='c') (void)fputc('a', (FILE *)np);
     else if (c[1]=='g') { f = fopen("NUL", "r"); (void)fgets((char *)nb, 10, f); }

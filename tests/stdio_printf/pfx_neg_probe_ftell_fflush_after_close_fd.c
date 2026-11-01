@@ -55,7 +55,7 @@ TC_CASE(fclose_eof)
     CHECK_EQ_I(fprintf(f, "x"), 1);
     CHECK_EQ_I(_close(_fileno(f)), 0);
     tc_iph_count = 0; r = fclose(f);
-    CHECK_EQ_I(r, EOF); CHECK(tc_iph_count <= 1);
+    CHECK_EQ_I(r, EOF); CHECK_EQ_I(tc_iph_count, 2); /* observed Win10 22H2 19045: fclose on a stream whose fd was closed calls the handler twice (flush + close) */
     DeleteFileA(TMP);
 }
 int main(void)

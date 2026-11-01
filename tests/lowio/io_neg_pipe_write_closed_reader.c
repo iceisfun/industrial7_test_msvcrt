@@ -5,9 +5,12 @@
  * crt:   all
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _write: returns -1 on error; errno mapping of ERROR_NO_DATA / ERROR_BROKEN_PIPE
  * note:  Probes: writing to a pipe whose read end is closed returns -1 (near certain) and errno is EPIPE (ERROR_NO_DATA / ERROR_BROKEN_PIPE both map to EPIPE in the CRT errno table). Each assertion is its own case.
+ *        Win10 22H2 19045 (observed): _write to a pipe whose read end is closed returns -1 with errno EINVAL and _doserrno 232 (ERROR_NO_DATA); WriteFile itself
+ *        fails with 232. It is not EPIPE.
+ *        [unverified] on other CRTs: only ucrtbase 19045 was observed; the expectation is gated with TC_AT_LEAST(140) and the original expectation is kept for older CRTs.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -43,7 +46,14 @@ TC_CASE(errno_epipe)
     if (f[1] < 0) return;
     errno = 0;
     _write(f[1], "abcd", 4);
+
+#if TC_AT_LEAST(140)
+    CHECK_EQ_I(errno, EINVAL);   /* observed: ERROR_NO_DATA (232) maps to EINVAL here */
+    CHECK_EQ_I(_doserrno, 232);
+#else
     CHECK_EQ_I(errno, EPIPE);
+#endif
+
     _close(f[1]);
 }
 

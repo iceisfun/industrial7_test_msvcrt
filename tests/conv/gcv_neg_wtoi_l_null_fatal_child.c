@@ -24,7 +24,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name())) return child_main(c);
+    if ((c = tc_child_name())) { tc_iph_default(); return child_main(c); }
     TC_RUN(wtoi_l_terminates); TC_RUN(wtoi64_l_terminates);
     return tc_end();
 }

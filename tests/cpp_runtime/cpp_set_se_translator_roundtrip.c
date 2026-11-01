@@ -12,7 +12,7 @@
  */
 #include "tc.h"
 #include <errno.h>
-#ifdef TC_UCRT
+#if TC_CRT_VER >= 140
 #define N_TERM "terminate"
 #define N_SETTERM "set_terminate"
 #define N_UNEXP "unexpected"

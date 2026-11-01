@@ -5,9 +5,11 @@
  * funcs: tmpnam_s _wtmpnam_s
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs tmpnam_s tmpnam_s error table (contents of str not modified on ERANGE)
- * note:  PROBE: after tmpnam_s(buf, 1) fails with ERANGE the buffer is expected to be left UNMODIFIED (buf[0] stays 'q'): the MS docs error table lists 'contents of str: not modified' for ERANGE, unlike most secure string functions which write an empty string. Also probes that size 0 yields ERANGE (docs: 'too short') rather than EINVAL.
+ * note:  OBSERVED on Win10 22H2 (19045): after tmpnam_s(buf,1)/_wtmpnam_s(buf,1) fail with ERANGE, buf[0] is 0 (empty string
+ *        written), contrary to the MS docs error table ("not modified"). size 0 returns ERANGE and leaves the buffer untouched
+ *        (nothing can be written). Docs deviate from Windows; stable.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -17,9 +19,9 @@
 static volatile size_t v_sz = 1;
 
 
-TC_CASE(narrow) { char b[32]; int r; b[0] = 'q'; tc_iph_count = 0; v_sz = 1; r = tmpnam_s(b, v_sz); CHECK_EQ_I(r, ERANGE); CHECK_EQ_I(b[0], 'q'); }
+TC_CASE(narrow) { char b[32]; int r; b[0] = 'q'; tc_iph_count = 0; v_sz = 1; r = tmpnam_s(b, v_sz); CHECK_EQ_I(r, ERANGE); CHECK_EQ_I(b[0], 0); }   /* observed: buffer set to empty string */
 TC_CASE(zero_size) { char b[32]; int r; b[0] = 'q'; v_sz = 0; r = tmpnam_s(b, v_sz); CHECK_EQ_I(r, ERANGE); CHECK_EQ_I(b[0], 'q'); }
-TC_CASE(wide)   { wchar_t b[32]; int r; b[0] = L'q'; v_sz = 1; r = _wtmpnam_s(b, v_sz); CHECK_EQ_I(r, ERANGE); CHECK_EQ_I(b[0], L'q'); }
+TC_CASE(wide)   { wchar_t b[32]; int r; b[0] = L'q'; v_sz = 1; r = _wtmpnam_s(b, v_sz); CHECK_EQ_I(r, ERANGE); CHECK_EQ_I(b[0], 0); }   /* observed: buffer set to empty string */
 
 int main(void)
 {

@@ -11,6 +11,9 @@
 #define TC_H
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#if defined(TC_CRT_VER) && TC_CRT_VER >= 140 && !defined(TC_UCRT)
+#define TC_UCRT 1
+#endif
 
 #ifndef TC_CRT_VER
 #error "build through tools/tc.py: TC_CRT_VER not defined"
@@ -149,7 +152,9 @@ static FARPROC tc_crt_proc(const char *name)
 #define TC_LOAD_PROC(name) (tc_p_##name = (tc_pt_##name)tc_crt_proc(#name))
 
 /* Invalid-parameter handler: counts calls and returns instead of terminating (ucrt/msvcr80+ default is fatal). */
-static int tc_iph_count;
+/* volatile: written from the invalid-parameter callback inside the CRT. Several printf-family functions are declared
+ * __MINGW_ATTRIB_PURE by mingw-w64 (e.g. _scprintf), so without volatile gcc caches the value across such calls and reads a stale count. */
+static volatile int tc_iph_count;
 static void __cdecl tc_iph(const wchar_t *e, const wchar_t *f, const wchar_t *fl, unsigned int l, uintptr_t r)
 { (void)e; (void)f; (void)fl; (void)l; (void)r; tc_iph_count++; }
 typedef void (__cdecl *tc_iph_t)(const wchar_t *, const wchar_t *, const wchar_t *, unsigned int, uintptr_t);
@@ -159,6 +164,79 @@ static int tc_iph_install(void)  /* returns 1 if the CRT has the API */
     if (!set) return 0;
     set(tc_iph); return 1;
 }
+
+/* OS-state (dual_state_global) invalid-parameter handler and errno. ucrtbase _o_* exports run in a separate OS state with their own errno
+ * (_o__errno) and their own handler (_o__set_invalid_parameter_handler); the app-state errno/handler are not touched by them93[34])?#934). */
+static volatile int tc_oiph_count;
+static void __cdecl tc_oiph(const wchar_t *e, const wchar_t *f, const wchar_t *fl, unsigned int l, uintptr_t r)
+{ (void)e; (void)f; (void)fl; (void)l; (void)r; tc_oiph_count++; }
+static int tc_oiph_install(void)  /* returns 1 if the CRT has the API */
+{
+    tc_iph_t (__cdecl *set)(tc_iph_t) = (tc_iph_t (__cdecl *)(tc_iph_t))tc_crt_proc("_o__set_invalid_parameter_handler");
+    if (!set) return 0;
+    set(tc_oiph); return 1;
+}
+static int *tc_o_errno_ptr(void)
+{
+    int *(__cdecl *f)(void) = (int *(__cdecl *)(void))tc_crt_proc("_o__errno");
+    return f ? f() : NULL;
+}
+static int tc_o_errno(void) { int *p = tc_o_errno_ptr(); return p ? *p : -12345; }
+static void tc_o_reset(void) { int *p = tc_o_errno_ptr(); if (p) *p = 0; tc_oiph_count = 0; }
+
+/* Restore the CRT's own DEFAULT invalid-parameter behaviour (fatal on ucrt/msvcr80+; __fastfail 0xC0000409 on ucrtbase) - class F93[34])?#934.
+ * The mingw-w64 startup code (crtexe.c: __mingw_invalidParameterHandler) installs a silent no-op handler before main(), so in a
+ * toolchain-built exe the CRT default handler never runs and a "default handler is fatal" child just returns from the failing call
+ * (observed on Win10 22H2 19045: child exit 77 instead of 0xC0000409). Opt-in: a child that asserts the default (fatal) behaviour calls
+ * this first; it is NOT done globally in tc_begin() (other children rely on the silent handler). On ucrtbase the OS-state handler used by
+ * the _o_* exports is already non-NULL at process start, so it is reset too. Returns 1 if the CRT has the (app-state) API. */
+static int tc_iph_default(void)
+{
+    tc_iph_t (__cdecl *set)(tc_iph_t) = (tc_iph_t (__cdecl *)(tc_iph_t))tc_crt_proc("_set_invalid_parameter_handler");
+    tc_iph_t (__cdecl *oset)(tc_iph_t) = (tc_iph_t (__cdecl *)(tc_iph_t))tc_crt_proc("_o__set_invalid_parameter_handler");
+    if (oset) oset((tc_iph_t)0);
+    if (!set) return 0;
+    set((tc_iph_t)0); return 1;
+}
+
+/* tc_begin() clears _CALL_REPORTFAULT (no Watson/WER). A child that wants the CRT's default abort()/purecall termination status
+ * (fast-fail 0xC0000409 instead of exit code 3) restores it with this. */
+static void tc_abort_default(void)
+{
+    unsigned int (__cdecl *sab)(unsigned int, unsigned int) = (unsigned int (__cdecl *)(unsigned int, unsigned int))tc_crt_proc("_set_abort_behavior");
+    if (sab) sab(0x2, 0x2);
+}
+
+/* 1 if p lies inside the test executable's own image (used to recognise handlers installed by the mingw startup code) */
+static int tc_addr_in_exe(const void *p)
+{
+    MEMORY_BASIC_INFORMATION mbi;
+    if (!p || !VirtualQuery(p, &mbi, sizeof mbi)) return 0;
+    return mbi.AllocationBase == (void *)GetModuleHandleA(NULL);
+}
+
+/* Exit-handler registration that works on every target CRT. ucrtbase exports _crt_atexit (void(void) callback, returns 0 on
+ * success) and does NOT export _onexit (GetProcAddress == NULL, Win10 22H2 19045); msvcrt/msvcr80-120 export _onexit
+ * (callback returns int, returns the callback or NULL) and not _crt_atexit [legacy side unverified on the reference].
+ * tc_reg_atexit: 0 on success, -1 if the CRT rejected the callback, -2 if neither export exists.
+ * The _onexit path passes a void(void) function where int(void) is declared: exit() ignores the callback result, and the
+ * cdecl call is ABI-safe on x86 and x64. */
+static int tc_reg_atexit(void (__cdecl *f)(void))
+{
+    int (__cdecl *ca)(void (__cdecl *)(void)) = (int (__cdecl *)(void (__cdecl *)(void)))tc_crt_proc("_crt_atexit");
+    void *(__cdecl *oe)(void *) = (void *(__cdecl *)(void *))tc_crt_proc("_onexit");
+    if (ca) return ca(f) == 0 ? 0 : -1;
+    if (oe) return oe((void *)f) != NULL ? 0 : -1;
+    return -2;
+}
+
+/* mingw-w64's crtexe installs _gnu_exception_handler via SetUnhandledExceptionFilter; for codes it does not know (e.g.
+ * STATUS_INTEGER_OVERFLOW 0xC0000095) it returns EXCEPTION_CONTINUE_EXECUTION, so the faulting instruction re-runs forever.
+ * Call tc_seh_default() first in a child that must observe the real Windows outcome: a first-chance vectored handler ends the
+ * process with the exception code (a SetUnhandledExceptionFilter replacement was observed NOT to take effect for 0xC0000095). */
+static LONG CALLBACK tc_seh_term(PEXCEPTION_POINTERS e)
+{ TerminateProcess(GetCurrentProcess(), e->ExceptionRecord->ExceptionCode); return EXCEPTION_CONTINUE_SEARCH; }
+static void tc_seh_default(void) { AddVectoredExceptionHandler(1, tc_seh_term); }
 
 
 /* ---- child-process support for tests of fatal paths (abort, default invalid-parameter handler, purecall, ...) ----

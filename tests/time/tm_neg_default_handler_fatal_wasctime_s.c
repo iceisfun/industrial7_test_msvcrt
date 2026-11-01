@@ -35,6 +35,7 @@ int main(void)
     tc_begin();
     TC_LOAD_PROC(_wasctime_s); TC_LOAD_PROC(asctime_s);
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();  /* mingw startup installs a no-op handler; restore the CRT default (fast-fail) */
         wchar_t w[32]; char b[32]; struct tm t; volatile size_t sz = 25;
         if (!tc_p__wasctime_s || !tc_p_asctime_s) return 78;
         t.tm_year = 117; t.tm_mon = 0; t.tm_mday = 1; t.tm_hour = t.tm_min = t.tm_sec = 0; t.tm_wday = 0; t.tm_yday = 0; t.tm_isdst = 0;

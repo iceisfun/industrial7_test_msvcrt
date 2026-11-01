@@ -11,6 +11,7 @@
  * note:  PROBE (ucrtbase exports _futime64; plain _futime is an inline alias, so falls back to it): _futime(-1, &buf) / _futime32(-1, &buf) with the default invalid-parameter handler. The UCRT default handler
  *        is expected to terminate the process with fast-fail 0xC0000409. Whether _futime reaches the handler for fd -1 (rather than
  *        only returning -1/EBADF) is what is probed. Child exit code 77 = call returned, 78 = export missing.
+ *        Children call tc_iph_default(): the mingw startup code installs a no-op invalid-parameter handler, which hid the CRT default.
  */
 #include "tc.h"
 
@@ -34,6 +35,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();  /* mingw startup installs a no-op handler; restore the CRT default (fast-fail) */
         static long long b64[2] = { 1000000000LL, 1000000000LL };
         static int b32[2] = { 1000000000, 1000000000 };
         volatile int fd = -1;

@@ -6,9 +6,10 @@
  * crt:   >=80
  * tier:  p2
  * kind:  positive
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs wctomb_s
  * note:  PROBE: what wctomb_s returns when the destination (size 1) is too small for a 2-byte CP932 char (U+3042).
+ *        Observed Win10 22H2 ucrtbase: returns ERANGE (34), *pRetValue == -1, buffer[0] is ZEROED (0x00), one handler call. Stable.
  *        Expect EINVAL (22), *pRetValue unchanged-or-(-1), buffer[0] untouched (the CRT may instead zero it, as the *_s string functions do), iph count >= 1. Each guess is its own case. Alternative: ERANGE (34). Measured on real Windows.
  */
 #include "tc.h"
@@ -33,11 +34,11 @@ static errno_t small_call(int *rv, char *b)
     setlocale(LC_ALL, "C");
     return e;
 }
-TC_CASE(small_errno_einval)
+TC_CASE(small_errno_einval)   /* name kept; observed value is ERANGE */
 {
     char b[4]; int rv = 99;
     if (!set932()) { setlocale(LC_ALL, "C"); TC_SKIP("932 locale unavailable"); }
-    CHECK_EQ_I(small_call(&rv, b), EINVAL);
+    CHECK_EQ_I(small_call(&rv, b), ERANGE);
 }
 TC_CASE(small_iph)
 {
@@ -46,12 +47,12 @@ TC_CASE(small_iph)
     small_call(&rv, b);
     CHECK(tc_iph_count >= 1);
 }
-TC_CASE(small_buf_untouched)
+TC_CASE(small_buf_untouched)   /* name kept; observed: buffer[0] is zeroed */
 {
     char b[4]; int rv = 99;
     if (!set932()) { setlocale(LC_ALL, "C"); TC_SKIP("932 locale unavailable"); }
     small_call(&rv, b);
-    CHECK_EQ_U((unsigned char)b[0], 0x55);
+    CHECK_EQ_U((unsigned char)b[0], 0x00);
 }
 int main(void)
 {

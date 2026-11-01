@@ -5,9 +5,12 @@
  * crt:   >=140
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs Parameter validation
  * note:  PROBE: exact termination status of clearerr_s(NULL) under the default invalid-parameter handler; expected fast-fail 0xC0000409 on ucrtbase; older CRTs not covered.
+ *        HARNESS FIX (class F, Win10 22H2): mingw crt2.o installs a no-op invalid-parameter handler at startup, so the child survived (exit 77 instead of
+ *        0xC0000409); the child now calls tc_iph_default() (tc.h) to restore the CRT default before the call under test.
+ *        OBSERVED (Win10 22H2): clearerr_s(NULL) under the default handler -> 0xC0000409, stable over 3 runs.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -23,7 +26,7 @@ TC_CASE(status)
 int main(void)
 {
     tc_begin();
-    if (tc_child_name()) { clearerr_s(nullfp); return 77; }
+    if (tc_child_name()) { tc_iph_default(); clearerr_s(nullfp); return 77; }
     TC_RUN(status);
     return tc_end();
 }

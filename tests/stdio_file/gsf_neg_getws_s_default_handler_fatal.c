@@ -41,6 +41,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
+    if (tc_child_name()) tc_iph_default();
     if ((c = tc_child_name()) != NULL) {
         wchar_t buf[8]; wchar_t *volatile r; wchar_t *volatile nb = NULL; volatile size_t z = 0, n8 = 8;
         if (!freopen(INF, "r", stdin)) return 3;

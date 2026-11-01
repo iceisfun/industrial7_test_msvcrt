@@ -28,7 +28,7 @@ int main(void)
 {
     tc_begin();
     TC_LOAD_PROC(_putenv_s);
-    if (tc_child_name()) { if (tc_p__putenv_s) tc_p__putenv_s(nullp, val); return 77; }
+    if (tc_child_name()) { tc_iph_default(); if (tc_p__putenv_s) tc_p__putenv_s(nullp, val); return 77; }
     TC_RUN(child_abnormal_exit);
     return tc_end();
 }

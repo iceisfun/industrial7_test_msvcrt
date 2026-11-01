@@ -5,11 +5,13 @@
  * crt:   >=80
  * tier:  p2
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _mkdir (errno ENOENT: path not found); Win32 naming files
  * note:  PROBE: asserts only _mkdir("") == -1 with errno ENOENT, and _mkdir of a name with '<' == -1 with errno
  *        ENOENT (ERROR_INVALID_NAME maps to ENOENT). The reserved name "con" and the trailing-dot name are only
  *        recorded (no assertions), with cleanup.
+ *        Win10 22H2 19045 (observed): _mkdir of a name with an illegal character ('<') fails with errno EINVAL (ERROR_INVALID_NAME), not ENOENT.
+ *        [unverified] on other CRTs: only ucrtbase 19045 was observed; the expectation is gated with TC_AT_LEAST(140) and the original expectation is kept for older CRTs.
  */
 #include "tc.h"
 #include <direct.h>
@@ -30,7 +32,13 @@ TC_CASE(illegal_char_errno)
     v_name = "tc_dir_probe_a<b";
     errno = 0;
     CHECK_EQ_I(_mkdir(v_name), -1);
-    CHECK_EQ_I(errno, ENOENT);
+    
+#if TC_AT_LEAST(140)
+CHECK_EQ_I(errno, EINVAL);   /* observed Win10 22H2 19045: ERROR_INVALID_NAME maps to EINVAL, not ENOENT */
+#else
+CHECK_EQ_I(errno, ENOENT);
+#endif
+
 }
 
 TC_CASE(reserved_con_recorded)

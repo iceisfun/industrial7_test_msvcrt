@@ -6,10 +6,13 @@
  * crt:   ucrtbase
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs Parameter validation: default handler terminates the process
  * note:  PROBE: _o_ aliases go through the same validation, so with no handler the child dies (probe: fast-fail 0xC0000409); with a handler it returns normally.
  *        The _o_ aliases are undocumented; expectations mirror the documented behaviour of the underlying function.
+ * note:  OBSERVED (Win10 22H2 19045): _o_ exports run in the OS state, whose invalid-parameter handler is separate from the app one and is already non-NULL at
+ *        process start (audit probe os_handler_at_start_nonnull=1), so tc_iph_default() alone left the child returning (exit 77). Class F (harness): tc_iph_default()
+ *        now resets both states; the child then dies with fast-fail 0xC0000409, as documented for the default handler.
  */
 #include "tc.h"
 #include <errno.h>
@@ -41,8 +44,9 @@ TC_CASE(control_with_handler)
 static int child_main(const char *c)
 {
     char buf[8]; volatile char *nul = NULL;
+    tc_iph_default();
     if (c[0] == 'c') {
-        if (!tc_iph_install() || !p_strcpy_s) return 1;
+        if (!(tc_iph_install() && tc_oiph_install()) || !p_strcpy_s) return 1;
         p_strcpy_s((char *)nul, 4, "a"); p_itoa_s(1, buf, 8, radix); p_strtol("1", NULL, radix);
         return 77;
     }

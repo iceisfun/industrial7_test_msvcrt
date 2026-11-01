@@ -5,9 +5,11 @@
  * crt:   ucrtbase
  * tier:  p2
  * kind:  positive
- * conf:  probe
+ * conf:  documented
  * ref:   corecrt_stdio_config.h
- * note:  PROBE: options=1 (a) on overflow (len > n) whether buf[n-1] becomes NUL, and (b) with len == n (exact fit without room for NUL): return value and whether buf[n-1] is overwritten by NUL. Expected most likely: return len, last byte NUL (legacy NUL termination wins).
+ * note:  options=1 is the legacy _vsnprintf mode. Observed on Windows 10 22H2 and matching MS docs _snprintf ("If len = count, len characters are stored,
+ *        no null terminator is appended, and len is returned"): on overflow (len > n) exactly n bytes are stored and buf[n-1] is the last text byte, NOT NUL;
+ *        with len == n the return is len and the last byte is the last text character (no NUL).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -18,12 +20,12 @@ static int vs(unsigned long long o, char *b, size_t n, const char *f, ...)
 { va_list ap; int r; va_start(ap, f); r = __stdio_common_vsprintf(o, b, n, f, NULL, ap); va_end(ap); return r; }
 static volatile int vi = 42;
 
-TC_CASE(overflow_nul_terminated)
+TC_CASE(overflow_not_nul_terminated)
 {
     char b[16];
     memset(b, 'Z', sizeof b);
     vs(1, b, 4, "abcdefgh");
-    CHECK_EQ_I(b[3], 0); CHECK_EQ_I(b[4], 'Z');
+    CHECK_EQ_I(b[3], 'd'); CHECK_EQ_I(b[4], 'Z');
 }
 TC_CASE(exact_return)
 {
@@ -37,11 +39,11 @@ TC_CASE(exact_last_byte)
     char b[16];
     memset(b, 'Z', sizeof b);
     vs(1, b, 8, "abcdefgh");
-    CHECK_EQ_I(b[7], 0);
+    CHECK_EQ_I(b[7], 'h');
 }
 int main(void)
 {
     tc_begin();
-    TC_RUN(overflow_nul_terminated); TC_RUN(exact_return); TC_RUN(exact_last_byte);
+    TC_RUN(overflow_not_nul_terminated); TC_RUN(exact_return); TC_RUN(exact_last_byte);
     return tc_end();
 }

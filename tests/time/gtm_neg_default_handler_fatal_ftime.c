@@ -42,6 +42,7 @@ int main(void)
 {
     tc_begin();
     if (tc_child_name() != NULL) {
+        tc_iph_default();  /* mingw startup installs a no-op handler; restore the CRT default (fast-fail) */
         fn_t f = (fn_t)crt_or("_ftime", "_ftime" TC_SZ);
         if (!f) return 78;
         f(NULL);

@@ -6,11 +6,13 @@
  * crt:   ucrtbase
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _futime, _utime ("... time_t values ... January 1, 1970 ... 23:59:59 December 31, 3000 UTC")
  * note:  PROBE range validation of _futime/_futime32: negative (pre-1970) times and times past 3000-12-31 23:59:59 UTC
  *        (32535215999) are expected to fail with -1/EINVAL. Year 3000-01-01 (32503680000) is inside the documented
  *        range and is probed separately (expected success). The invalid-parameter handler is installed, so a handler call is tolerated.
+ *        Windows 10 22H2 ucrtbase accepts _futime64 times up to _MAX__TIME64_T = 32536799999 (3001-01-19 07:59:59 UTC), not the documented
+ *        3000-12-31; the "past limit" case therefore uses 32536800000. Docs: https://learn.microsoft.com/cpp/c-runtime-library/reference/futime-futime32-futime64
  */
 #include "tc.h"
 #include <errno.h>
@@ -48,7 +50,7 @@ TC_CASE(futime64_year3000_ok)
 }
 TC_CASE(futime64_past_limit)
 {
-    int fd, r; long long b[2] = { 32535216000LL, 32535216000LL };  /* 3001-01-01T00:00:00Z */
+    int fd, r; long long b[2] = { 32536800000LL, 32536800000LL };  /* 3001-01-19T08:00:00Z = _MAX__TIME64_T + 1 */
     if (!p64) TC_SKIP("no _futime");
     fd = mk(); CHECK(fd >= 0); if (fd < 0) return;
     errno = 0; r = p64(fd, b);

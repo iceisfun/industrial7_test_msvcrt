@@ -2,12 +2,14 @@
  * id:    pfq_neg_probe_swprintf_p_exact_length
  * area:  stdio_printf
  * funcs: _swprintf_p
- * crt:   >=90
+ * crt:   ucrtbase
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _swprintf_p (count includes the terminating NUL); compare sprintf_s
- * note:  PROBE: count equal to the output length (6 wide chars, no room for the terminator) is rejected with -1, like the narrow case in pfq_neg_probe_sprintf_p_exact_len. Real Windows could instead return 6 without a terminator (legacy _snprintf style); that is exactly what is being probed. Guard bytes beyond count must survive either way.
+ * note:  Observed on Windows 10 22H2: __stdio_common_vswprintf_p(0, b, 6, L"%1$ls", L"abcdef") (count == output length, no room for the NUL) returns -2
+ *        (the raw worker status for "does not fit" as reached via the mingw wrapper; MSVC SDK inline wrappers may normalise to -1 [unverified]), not -1; no handler call; it stores the truncated NUL-terminated "abcde" and leaves the guard
+ *        elements beyond count untouched.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -57,7 +59,7 @@ TC_CASE(count_equals_length)
     wchar_t b[16]; int r;
     fillw(b, 16);
     r = tp_swn(b, 6, F, S6);
-    CHECK_EQ_I(r, -1);
+    CHECK_EQ_I(r, -2);
     CHECK(guardw(b, 6, 16));
 }
 int main(void)

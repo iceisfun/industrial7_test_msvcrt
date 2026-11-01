@@ -32,7 +32,7 @@ int main(void)
     const char *c; char b[16]; int d, s;
     tc_begin();
     TC_LOAD_PROC(_ecvt_s); TC_LOAD_PROC(_fcvt_s); TC_LOAD_PROC(_gcvt_s);
-    if ((c = tc_child_name()) != NULL) {
+    if ((c = tc_child_name()) != NULL) { tc_iph_default();
         if (c[0] == 'e' && tc_p__ecvt_s) tc_p__ecvt_s(nullp, 16, 1.5, 3, &d, &s);
         else if (c[0] == 'f' && tc_p__fcvt_s) tc_p__fcvt_s(b, zero_size, 1.5, 3, &d, &s);
         else if (c[0] == 'g' && tc_p__gcvt_s) tc_p__gcvt_s(nullp, 16, 1.5, 3);

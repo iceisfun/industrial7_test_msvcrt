@@ -5,10 +5,13 @@
  * funcs: _getcwd _wgetcwd _getdcwd _wgetdcwd _getdrive
  * crt:   all
  * tier:  p0
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _getcwd: "ERANGE: Path is longer than maxlen characters" (the terminating NUL counts)
- * note:  Caller-supplied buffer of len+8 bytes but maxlen == strlen(cwd): there is no room for the NUL, so the call must fail
- *        with NULL/ERANGE. maxlen == strlen(cwd)+1 is the success control. Also covers maxlen 2.
+ * note:  Caller-supplied buffer of len+8 bytes but maxlen == strlen(cwd): no room for the NUL, so NULL/ERANGE. maxlen ==
+ *        strlen(cwd)+1 is the success control for _getcwd/_getdcwd. Class A (_wgetcwd is not ISO C; the deviation is from the MS docs): OBSERVED on Win10 22H2 ucrtbase (cwd
+ *        C:\tc\ucrtbase, 14 chars): _wgetcwd(buf, len+1) and (buf, len+2) return NULL/ERANGE and only maxlen >= len+3 succeeds,
+ *        deviating from the MS docs (ERANGE only when the path is longer than maxlen). Cwd-dependence of the +3 margin is
+ *        [unverified]: only the cwd C:\tc\ucrtbase of this harness was exercised.
  */
 #include "tc.h"
 #include <direct.h>
@@ -39,7 +42,12 @@ TC_CASE(wgetcwd_too_small)
     CHECK(p == NULL); CHECK_EQ_I(errno, ERANGE);
     errno = 0; p = _wgetcwd(buf, len + v_n);
     CHECK(p == NULL); CHECK_EQ_I(errno, ERANGE);
+    /* OBSERVED on Win10 22H2 ucrtbase: unlike _getcwd, _wgetcwd needs maxlen >= len + 3 (len+1 and len+2 still give ERANGE) */
     errno = 0; p = _wgetcwd(buf, len + 1 + v_n);
+    CHECK(p == NULL); CHECK_EQ_I(errno, ERANGE);
+    errno = 0; p = _wgetcwd(buf, len + 2 + v_n);
+    CHECK(p == NULL); CHECK_EQ_I(errno, ERANGE);
+    errno = 0; p = _wgetcwd(buf, len + 3 + v_n);
     CHECK_EQ_P(p, buf); CHECK_WSTR(buf, ref);
 }
 TC_CASE(getdcwd_too_small)

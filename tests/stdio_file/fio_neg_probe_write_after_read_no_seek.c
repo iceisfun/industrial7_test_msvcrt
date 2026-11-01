@@ -5,12 +5,13 @@
  * funcs: fopen fgetc fputc fclose ferror clearerr setvbuf
  * crt:   all
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.21.5.3p7 (undefined); MS _flsbuf legacy
  * note:  PROBE: on "r+b" stream, fgetc then fputc with no fseek/fflush. Case not_at_eof uses an UNBUFFERED stream (_IONBF)
  *        so the putc fast path (--_cnt >= 0) cannot silently store into the read buffer (which a buffered stream would do);
  *        expected: _flsbuf sees _IOREAD without _IOEOF -> fputc returns EOF and sets ferror. Case at_eof: after a read hit EOF the
  *        fputc succeeds. Cases kept separate.
+ *        OBSERVED (Win10 22H2, class A): fputc('X') right after fgetc on an unbuffered r+b stream returns 'X' with ferror 0 (raw: c == EOF got=88; ferror(fp) != 0). C11 7.21.5.3 makes this UB; stable.
  */
 #include "tc.h"
 #define TC_S2(x) #x
@@ -40,8 +41,8 @@ TC_CASE(not_at_eof)
     CHECK_EQ_I(setvbuf(fp, NULL, _IONBF, 0), 0);
     CHECK_EQ_I(fgetc(fp), '0');
     c = fputc('X', fp);
-    CHECK_EQ_I(c, EOF);
-    CHECK(ferror(fp) != 0);
+    CHECK_EQ_I(c, 'X');          /* observed: accepted (C11 7.21.5.3p7 makes it UB, so Windows is free to allow it) */
+    CHECK_EQ_I(ferror(fp), 0);
     clearerr(fp);
     fclose(fp);
 }

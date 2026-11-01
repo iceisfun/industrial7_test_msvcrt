@@ -5,10 +5,12 @@
  * crt:   >=80
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _wcsdup
  * note:  PROBE: _wcsdup(NULL) returns NULL (most likely). Whether it also sets errno=EINVAL and calls the
  *        invalid-parameter handler is probed in a separate case (believed from CRT source, not documented).
+ *        Observed Win10 22H2 ucrtbase: _wcsdup(NULL) returns NULL, errno stays 0 and the handler is NOT called (no parameter
+ *        validation). Stable.
  */
 #include "tc.h"
 #include <wchar.h>
@@ -27,6 +29,6 @@ TC_CASE(errno_and_handler)
     if (!tc_iph_install()) TC_SKIP("no iph");
     tc_iph_count = 0; errno = 0;
     r = _wcsdup(s);
-    CHECK(r == NULL); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK(r == NULL); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);   /* observed: no validation */
 }
 int main(void) { tc_begin(); TC_RUN(returns_null); TC_RUN(errno_and_handler); return tc_end(); }

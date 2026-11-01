@@ -6,9 +6,13 @@
  * crt:   >=90
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs wcrtomb_s
- * note:  ERANGE when the output buffer is too small; EILSEQ with *pReturnValue == -1 for an unmappable character.
+ * note:  Win10 triage (class B): ucrtbase 19045 reports EILSEQ, not ERANGE, for the too-small buffer in a DBCS locale (observed on Windows 10 22H2
+ *        build 19045; deviates from the MS docs ERANGE row).
+ *        Original: ERANGE when the output buffer is too small; EILSEQ with *pReturnValue == -1 for an unmappable character.
+ *        [scope] observed on ucrtbase 19045 only; the legacy CRTs listed in crt: are [unverified] until the P3 runs.
+ *        [class B] deviates from the runtime-constraint rules of C11 Annex K (K.3.6.x / K.3.9.3.x) that the MS docs mirror; expectation = Windows behavior.
  */
 #include "tc.h"
 #include <wchar.h>
@@ -27,9 +31,11 @@ TC_CASE(erange_dbcs)
 {
     char b[8]; size_t n = 99; errno_t e;
     if (!tc_p_wcrtomb_s || !tc_iph_install()) TC_SKIP("n/a");
-    CHECK(setlocale(LC_ALL, ".932") != NULL); rst(); errno = 0;
+    CHECK(setlocale(LC_ALL, ".932") != NULL); rst(); errno = 0; memset(b, 0x55, sizeof b);
     v_wc = 0x3042; e = tc_p_wcrtomb_s(&n, b, 1, v_wc, PST);
-    CHECK_EQ_I(e, ERANGE); CHECK_EQ_I(errno, ERANGE);
+    /* Win10 22H2 ucrtbase (observed): a 2-byte CP932 char into a 1-byte buffer yields EILSEQ (42), *pReturnValue == -1, not ERANGE; buffer untouched */
+    CHECK_EQ_I(e, EILSEQ); CHECK_EQ_I(errno, EILSEQ);
+    CHECK_EQ_U(n, (size_t)-1); CHECK_EQ_I((unsigned char)b[0], 0x55);
     setlocale(LC_ALL, "C");
 }
 TC_CASE(eilseq_cyrillic)

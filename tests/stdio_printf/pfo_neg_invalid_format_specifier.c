@@ -6,12 +6,13 @@
  * procs: _set_invalid_parameter_handler
  * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf type field (docs also say a % followed by a meaningless char is copied literally - conflicts with UCRT validation)
- * note:  PROBES that UCRT rejects unknown conversion chars (%y, %Q) with -1/EINVAL/handler once, rather than copying them literally
- *        as the printf format-specification docs state. valid_still_works is the only documented case.
+ * note:  OBSERVED: __stdio_common_vsprintf(0) copies unknown conversion chars (%y, %Q) literally (without the '%'), as the printf docs say,
+ *        with no -1/EINVAL/handler. valid_still_works is the only documented case.
  *        Only unknown type characters are asserted here. End-of-string and size-prefix oddities are in pfo_neg_invalid_format_probe.
  *        Buffer content after failure is not asserted.
+ *        Observed on Win10 22H2 19045 ucrtbase: the non-_s printf family does not validate format strings (no handler call, no errno); the bad conversion char is copied through.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -29,18 +30,18 @@ TC_CASE(unknown_y)
     char b[32]; const char * volatile f = "a%yb"; int r;
     tc_iph_count = 0; errno = 0;
     r = cv(b, sizeof b, f, 1);
-    CHECK_EQ_I(r, -1);
-    CHECK_EQ_I(errno, EINVAL);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 3); CHECK_STR(b, "ayb");
+    CHECK_EQ_I(errno, 0);
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(unknown_Q)
 {
     char b[32]; const char * volatile f = "%Q"; int r;
     tc_iph_count = 0; errno = 0;
     r = cv(b, sizeof b, f, 1);
-    CHECK_EQ_I(r, -1);
-    CHECK_EQ_I(errno, EINVAL);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 1); CHECK_STR(b, "Q");
+    CHECK_EQ_I(errno, 0);
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(valid_still_works)
 {

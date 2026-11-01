@@ -5,12 +5,10 @@
  * crt:   ucrtbase
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.24.5.8 (first call with null pointer: behaviour undefined by the standard)
- * note:  PROBE: in a brand-new thread (no prior strtok state) strtok(NULL, ",") returns NULL without crashing. Run in a child process
- *        so a crash or fastfail only shows as a different exit code. The child also installs the invalid-parameter handler, so a
- *        CRT that reports EINVAL through it still passes if it then returns NULL.
- *        Restricted to ucrtbase: older CRTs (msvcrt, msvcr80-120) are believed to dereference the NULL saved token and may crash; add them back only after real-Windows runs show NULL.
+ * note:  OBSERVED on Win10 22H2 ucrtbase: in a brand-new thread strtok(NULL, ",") dereferences the null per-thread state and
+ *        the process dies with an access violation (0xC0000005); it does not return NULL. Run in a child process.
  */
 #include "tc.h"
 #include <string.h>
@@ -39,7 +37,7 @@ TC_CASE(fresh_thread_returns_null)
 {
     DWORD code = 0;
     CHECK(tc_spawn_self("nullfirst", &code, 20000));
-    CHECK_EQ_U(code, 77);
+    CHECK_EQ_U(code, 0xC0000005u);   /* Class C: Windows crashes (no validation, null saved-pointer deref) */
 }
 
 int main(void)

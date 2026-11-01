@@ -6,9 +6,10 @@
  * crt:   ucrtbase
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   C11 F.10.4.4; MS docs pow
- * note:  probes errno of powf: EDOM for negative base with non-integer exponent, ERANGE on underflow/overflow,
+ * note:  OBSERVED on Win10 22H2: powf(2,-200) underflows to +0 with errno left 0 (C11 7.12.1: underflow ERANGE is implementation-defined).
+ *        probes errno of powf: EDOM for negative base with non-integer exponent, ERANGE on underflow/overflow,
  *        and no errno change for infinity operands. Windows errno policy for float pow is not documented per case.
  */
 #include "tc.h"
@@ -24,7 +25,7 @@ TC_DECL_PROC(float, powf, (float, float));
 #define powf tc_p_powf
 
 TC_CASE(neg_base_frac_edom_cube_root) { volatile float x = -8.0f, y = 1.0f / 3.0f, r; errno = 0; r = powf(x, y); CHECK_IS_NAN(r); CHECK_EQ_I(errno, EDOM); }
-TC_CASE(underflow_erange) { volatile float x = 2.0f, y = -200.0f, r; errno = 0; r = powf(x, y); CHECK_BITS_F(r, 0.0f); CHECK_EQ_I(errno, ERANGE); }
+TC_CASE(underflow_erange) { volatile float x = 2.0f, y = -200.0f, r; errno = 0; r = powf(x, y); CHECK_BITS_F(r, 0.0f); CHECK_EQ_I(errno, 0); }
 TC_CASE(pos_inf_base_errno_unchanged) { volatile float x = v_inf, y = 2.0f, r; errno = SENT; r = powf(x, y); CHECK(r == v_inf); CHECK_EQ_I(errno, SENT); }
 TC_CASE(m1_pow_inf_errno_unchanged) { volatile float x = -1.0f, y = v_inf, r; errno = SENT; r = powf(x, y); CHECK_BITS_F(r, 1.0f); CHECK_EQ_I(errno, SENT); }
 TC_CASE(neg_base_huge_odd_int_overflow_sign) { volatile float x = -2.0f, y = 201.0f, r; errno = 0; r = powf(x, y); CHECK(r == -v_inf); CHECK_EQ_I(errno, ERANGE); }

@@ -6,9 +6,13 @@
  * crt:   >=90
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs wcrtomb_s error table
  * note:  Invalid-parameter handler is counted.
+ *        Win10 triage (class B): ucrtbase 19045 accepts a non-NULL buffer with sizeInBytes == 0 (writes the byte, returns 0); only the NULL-buffer/size>0
+ *        case is an EINVAL. Observed on Windows 10 22H2 build 19045.
+ *        [scope] observed on ucrtbase 19045 only; the legacy CRTs listed in crt: are [unverified] until the P3 runs.
+ *        [class B] deviates from the runtime-constraint rules of C11 Annex K (K.3.6.x / K.3.9.3.x) that the MS docs mirror; expectation = Windows behavior.
  */
 #include "tc.h"
 #include <wchar.h>
@@ -37,8 +41,10 @@ TC_CASE(nonnull_size_zero)
     if (!tc_p_wcrtomb_s || !tc_iph_install()) TC_SKIP("n/a");
     rst(); c0 = tc_iph_count; errno = 0; memset(b, 0x55, sizeof b);
     e = tc_p_wcrtomb_s(&n, b, 0, v_wc, PST);
-    CHECK_EQ_I(e, EINVAL); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count - c0, 1);
-    CHECK_EQ_I((unsigned char)b[0], 0x55);
+    /* Win10 22H2 ucrtbase (observed): sizeInBytes == 0 with a non-NULL buffer is NOT rejected: returns 0, *pReturnValue == 1 and 'A' is written to b[0]
+     * (deviates from the MS docs EINVAL row; the declared size is ignored). */
+    CHECK_EQ_I(e, 0); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count - c0, 0);
+    CHECK_EQ_U(n, 1); CHECK_EQ_I((unsigned char)b[0], 'A');
 }
 TC_CASE(null_buf_zero_size_ok)
 {
@@ -56,7 +62,7 @@ TC_CASE(iph_counts)
     tc_p_wcrtomb_s(&n, NULL, 8, v_wc, PST);
     tc_p_wcrtomb_s(&n, b, 0, v_wc, PST);
     tc_p_wcrtomb_s(&n, NULL, 0, v_wc, PST);
-    CHECK_EQ_I(tc_iph_count - c0, 2);
+    CHECK_EQ_I(tc_iph_count - c0, 1);   /* only (NULL buffer, size 8) is rejected; see nonnull_size_zero */
 }
 int main(void)
 {

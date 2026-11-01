@@ -26,7 +26,7 @@ typedef void (__cdecl *ih_t)(const wchar_t *, const wchar_t *, const wchar_t *, 
 static int child_main(const char *c)
 {
     volatile size_t one = 1;
-    if (c[0] == 'd') { qsort(NULL, one, 1, cmp); return 77; }             /* "default" */
+    if (c[0] == 'd') { tc_iph_default(); qsort(NULL, one, 1, cmp); return 77; }             /* "default" */
     _set_invalid_parameter_handler((ih_t)myh);                             /* "handler" */
     errno = 0;
     qsort(NULL, one, 1, cmp);

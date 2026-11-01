@@ -10,6 +10,7 @@
  * note:  Child-process test. _scprintf(NULL) must terminate the process under the default handler, while the pure length query
  *        snprintf(NULL, 0, "abc") must not (exit 77 reached, and it returned 3). Unknown-conversion fatality is probed
  *        in pfr_neg_probe_default_handler_scprintf_unknown_conv_fatal.
+ *        F (harness): children now run with the CRT default handler (tc.h) and tc_iph_count is volatile; the nullfmt child keeps the _scprintf result because the call is declared pure.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -31,7 +32,7 @@ int main(void)
             r1 = _scprintf(nf);
             return (r1 == -1 && tc_iph_count == 1) ? 77 : 100 + tc_iph_count;
         }
-        if (!lstrcmpA(c, "nullfmt")) _scprintf(nf);
+        if (!lstrcmpA(c, "nullfmt")) { tc_iph_default(); volatile int rr = _scprintf(nf); (void)rr; }   /* result kept: _scprintf is declared pure, an unused call is dropped */
         else if (!lstrcmpA(c, "query")) return snprintf(NULL, 0, ok) == 3 ? 77 : 99;
         return 77;
     }

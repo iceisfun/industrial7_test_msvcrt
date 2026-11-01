@@ -6,9 +6,12 @@
  * crt:   ucrtbase msvcr120 msvcr110
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs wcrtomb_s: insufficient buffer is a parameter error
  * note:  PROBES: wcrtomb_s with a 1-byte buffer for a 2-byte cp932 char returns ERANGE or EINVAL (either accepted), and whether the invalid-parameter handler is called (expected: yes, count>=1).
+ *        Observed Win10 22H2 ucrtbase: returns EILSEQ (42) with *pReturnValue == (size_t)-1, buffer untouched and NO handler call
+ *        (the insufficient-buffer failure of WideCharToMultiByte is reported as an encoding error). A 4-byte buffer succeeds (0, n==2).
+ *        Deviates from the MS docs/Annex K. Stable.
  */
 #include "tc.h"
 #include <wchar.h>
@@ -30,8 +33,9 @@ TC_CASE(small_buffer)
     memset(&st, 0, sizeof st);
     tc_iph_install(); tc_iph_count = 0;
     r = wcrtomb_s(&n, b, 1, w, ST(&st));
-    CHECK(r == ERANGE || r == EINVAL);
-    CHECK(tc_iph_count >= 1);
+    CHECK_EQ_I(r, EILSEQ);               /* observed */
+    CHECK_EQ_U(n, (size_t)-1);
+    CHECK_EQ_I(tc_iph_count, 0);         /* observed: no handler call */
     restore_c();
 }
 int main(void)

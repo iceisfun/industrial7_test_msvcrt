@@ -5,9 +5,12 @@
  * procs: set_unexpected ?set_unexpected@@YAP6AXXZP6AXXZ@Z _get_unexpected
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90
  * tier:  p2
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs set_unexpected, _get_unexpected
- * note:  Deprecated since C++11 but still exported. Handlers are stored and compared, never invoked.
+ * note:  Deprecated since C++11 but still exported by ucrtbase (set_unexpected, unexpected, _get_unexpected are plain C names).
+ *        Handlers are stored and compared, never invoked. OBSERVED on Win10 22H2: set_unexpected(NULL) returns the previous
+ *        handler but _get_unexpected() then yields the default handler (equal to the startup value), not NULL. (equality with the startup value
+ *        observed, 4 runs).
  */
 #include "tc.h"
 
@@ -16,7 +19,7 @@ typedef th_t (__cdecl *setth_t)(th_t);
 typedef th_t (__cdecl *getth_t)(void);
 #define N_SET "set_unexpected"
 #define N_SETD "?set_unexpected@@YAP6AXXZP6AXXZ@Z"
-#ifdef TC_UCRT
+#if TC_CRT_VER >= 140
 #define PICK(a, b) tc_crt_proc(a) ? tc_crt_proc(a) : tc_crt_proc(b)
 #else
 #define PICK(a, b) tc_crt_proc(b)
@@ -43,7 +46,7 @@ TC_CASE(set_null)
 {
     if (!p_set || !p_get) TC_SKIP("not exported");
     CHECK(p_set(NULL) == h2);
-    CHECK(p_get() == NULL);
+    CHECK(p_get() == initial);   /* observed: NULL resets to the default handler, it does not read back as NULL */
 }
 TC_CASE(restore)
 {

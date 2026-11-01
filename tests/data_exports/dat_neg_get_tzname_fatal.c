@@ -5,9 +5,11 @@
  * funcs: _get_tzname
  * crt:   ucrtbase
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs "Parameter validation": default invalid parameter handler terminates the process
  * note:  Probes the exact termination status (expected fast-fail 0xC0000409) when _get_tzname gets index 5 with no handler installed.
+ * note:  Class F93[34])?#934, Win10 22H2 19045; raw "code == TC_STATUS_FASTFAIL got=0x4d"): the MinGW startup handler returns, so the child ran to its own exit 77.
+ *        The child now restores the CRT default handler (tc_iph_default); the assertion (fast-fail 0xC0000409) is unchanged.
  */
 #include "tc.h"
 #include <time.h>
@@ -22,7 +24,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) { size_t r; char b[8]; volatile int idx = 5; _get_tzname(&r, b, sizeof b, idx); return 77; }
+    if ((c = tc_child_name()) != NULL) { size_t r; char b[8]; tc_iph_default(); volatile int idx = 5; _get_tzname(&r, b, sizeof b, idx); return 77; }
     TC_RUN(child_terminates_fastfail);
     return tc_end();
 }

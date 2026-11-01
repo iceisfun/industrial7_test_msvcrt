@@ -23,6 +23,7 @@ TC_CASE(fopen_null_status)
 int main(void)
 {
     tc_begin();
+    if (tc_child_name()) tc_iph_default();
     if (tc_child_name()) { const char *volatile p = NULL; FILE *f = fopen(p, "r"); if (f) fclose(f); return 77; }
     TC_RUN(fopen_null_status);
     return tc_end();

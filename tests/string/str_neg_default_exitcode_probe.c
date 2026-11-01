@@ -24,7 +24,7 @@ TC_CASE(exit_code)
 int main(void)
 {
     tc_begin();
-    if (tc_child_name()) { pd = NULL; strcpy_s(pd, 1, "a"); return 77; }
+    if (tc_child_name()) { tc_iph_default(); pd = NULL; strcpy_s(pd, 1, "a"); return 77; }
     TC_RUN(exit_code);
     return tc_end();
 }

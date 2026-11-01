@@ -8,6 +8,7 @@
  * conf:  observed
  * ref:   MS docs strftime: tm fields are validated
  * note:  Each field is checked in its own case, with a format that uses it.
+ *        Win10 19045 ucrtbase: handler count is 2 per failing strftime call with an invalid tm field (errno EINVAL, return 0 as before); an invalid format specifier counts 1.
  */
 #include "tc.h"
 #include <time.h>
@@ -21,12 +22,18 @@ static void mk(struct tm *t, int Y, int Mo, int D, int h, int m, int s, int wd, 
     t->tm_wday = wd; t->tm_yday = yd; t->tm_isdst = dst;
 }
 
+/* observed on Win10 ucrtbase: an invalid tm field invokes the invalid-parameter handler TWICE per strftime call (once for the tm, once more from the format loop) */
+#if TC_CRT_VER >= 140
+#define IPH_N 2
+#else
+#define IPH_N 1
+#endif
 static char buf[64];
 static void bad(struct tm *t, const char *fmt)
 {
     size_t r; errno = 0; tc_iph_count = 0; buf[0] = 0;
     r = strftime(buf, sizeof buf, fmt, t);
-    CHECK_EQ_U(r, 0); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_U(r, 0); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, IPH_N);
 }
 TC_CASE(mon12) { struct tm t; mk(&t, 2020, 6, 15, 12, 30, 30, 1, 166, 0); t.tm_mon = 12; bad(&t, "%b"); t.tm_mon = -1; bad(&t, "%b"); }
 TC_CASE(wday7) { struct tm t; mk(&t, 2020, 6, 15, 12, 30, 30, 1, 166, 0); t.tm_wday = 7; bad(&t, "%a"); }

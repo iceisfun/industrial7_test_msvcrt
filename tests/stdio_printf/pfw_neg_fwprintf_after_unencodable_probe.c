@@ -3,12 +3,12 @@
  * area:  stdio_printf
  * kind:  negative
  * funcs: fwprintf _wfopen
- * crt:   all
+ * crt:   ucrtbase
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.29.2.2
- * note:  PROBES: after an encoding failure on an ANSI stream (U+4E2D in C locale), a later fwprintf of plain ASCII on the same
- *        stream succeeds (returns its length). Unknown whether the stream is left in an error state.
+ * note:  Observed on Windows 10 22H2, "C" locale: fwprintf(f, L"%c", U+4E2D) on an ANSI-mode file stream returns 1 (the unencodable character is written as
+ *        '?', errno EILSEQ) and does not poison the stream: a later fwprintf of ASCII returns 3. Deviates from C11 7.29.2.1 / 7.21.6.1p14 (encoding error -> negative).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -23,9 +23,12 @@ TC_CASE(ascii_after)
     FILE *f = _wfopen(FN, L"w"); int r;
     if (!f) TC_SKIP("cannot create temp file");
     r = fwprintf(f, L"%c", zh);
-    CHECK_EQ_I(r, -1);
+    CHECK_EQ_I(r, 1);
     r = fwprintf(f, L"abc");
     CHECK_EQ_I(r, 3);
-    fclose(f); _wunlink(FN);
+    fclose(f);
+    f = _wfopen(FN, L"rb");
+    if (f) { char b[8] = {0}; size_t k = fread(b, 1, sizeof b, f); CHECK_EQ_I((int)k, 4); CHECK_STR(b, "?abc"); fclose(f); }
+    _wunlink(FN);
 }
 int main(void) { tc_begin(); TC_RUN(ascii_after); return tc_end(); }

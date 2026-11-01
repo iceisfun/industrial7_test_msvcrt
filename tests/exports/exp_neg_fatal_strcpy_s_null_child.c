@@ -43,6 +43,7 @@ int main(void)
         volatile char *d = NULL; int r;
         SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);   /* no WER dialog on real Windows */
         if (!f) return 79;
+        tc_iph_default();
         r = f((char *)d, 10, "x");
         return r == EINVAL ? 77 : 78;
     }

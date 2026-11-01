@@ -5,11 +5,12 @@
  * funcs: strcpy_s
  * crt:   >=140
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs "Parameter validation": without a handler an invalid parameter terminates the process
- * note:  Probes the exact termination status of the UCRT default invalid-parameter path. Expected to be a fast-fail
- *        (0xC0000409) on ucrtbase; the docs only promise termination, so the exact code is what we want measured on real Windows.
- *        Fatal path runs in a child process (see tc_spawn_self).
+ * note:  Observed on Win10 22H2 19045 ucrtbase: with the CRT's default invalid-parameter handler restored in the child
+ *        (tc_iph_default(); the mingw startup installs a no-op handler that made the child just return 77) strcpy_s(d, 0, "x")
+ *        ends the process with STATUS_STACK_BUFFER_OVERRUN 0xC0000409 (fast-fail). Stable over repeated runs. Fatal path runs
+ *        in a child process.
  */
 #include "tc.h"
 #include <string.h>
@@ -26,7 +27,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) { char d[2]; volatile int one = 1; (void)one; strcpy_s(d, 0, "x"); return 77; /* reached only if the CRT did not terminate */ }
+    if ((c = tc_child_name()) != NULL) { char d[2]; volatile int one = 1; (void)one; tc_iph_default(); strcpy_s(d, 0, "x"); return 77; /* reached only if the CRT did not terminate */ }
     TC_RUN(child_terminates);
     return tc_end();
 }

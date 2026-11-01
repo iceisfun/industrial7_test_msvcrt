@@ -67,7 +67,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) {
+    if ((c = tc_child_name()) != NULL) { tc_iph_default();
         if (c[0] == 'w') { const wchar_t *volatile n = NULL; (void)wcstoumax(n, NULL, 10); }
         return 77;
     }

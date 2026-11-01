@@ -5,9 +5,10 @@
  * crt:   ucrtbase
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   Parameter validation; ucrt default invalid parameter handler calls __fastfail
  * note:  PROBES: the default handler terminates the child with exactly STATUS_STACK_BUFFER_OVERRUN (0xC0000409).
+ *        OBSERVED (Win10 22H2 19045 ucrtbase, runs stable): exit 0xC0000409 after tc_iph_default() restores the real default handler (mingw startup installs a silent one).
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -25,7 +26,7 @@ TC_CASE(status)
 int main(void)
 {
     tc_begin();
-    if (tc_child_name()) {
+    if (tc_child_name()) { tc_iph_default();
         _locale_t loc = _create_locale(LC_ALL, "C");
         vp = L"1"; (void)_wcstol_l(vp, NULL, vbase, loc);
         return 77;

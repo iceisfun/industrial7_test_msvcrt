@@ -9,6 +9,9 @@
  * ref:   C11 7.29.6.1.1 btowc, 7.29.6.1.2 wctob; MS docs btowc, wctob
  * note:  btowc/wctob are exported by msvcr110+ only in the mingw import libs (msvcr100 lacks them).
  *        The 1252 case is documented code-page mapping (0x80 = EURO SIGN).
+ *        Win10 triage (class B): ucrtbase wctob(0x20AC) in 1252 returns -128 (sign-extended char), not 128 as C11 7.29.6.1.2 says.
+ *        Observed on Windows 10 22H2 build 19045; deviates from C11 7.29.6.1.2.
+ *        [scope] observed on ucrtbase 19045 only; the legacy CRTs listed in crt: are [unverified] until the P3 runs.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -24,7 +27,11 @@ TC_CASE(cp1252_euro_both_ways)
     volatile const char *n = ".1252"; volatile int c = 0x80; volatile wint_t w = 0x20AC;
     if (!setlocale(LC_ALL, (const char *)n)) { setlocale(LC_ALL, "C"); TC_SKIP("1252 rejected"); }
     CHECK_EQ_U(btowc(c), 0x20AC);
-    CHECK_EQ_I(wctob(w), 0x80);
+#if TC_AT_LEAST(140)
+    CHECK_EQ_I(wctob(w), -128);   /* observed on Win10 22H2 ucrtbase: returns the (signed) char 0x80 sign-extended; C11 7.29.6.1.2 requires unsigned char (128) */
+#else
+    CHECK_EQ_I(wctob(w), 0x80);   /* [unverified] on the legacy CRTs */
+#endif
     setlocale(LC_ALL, "C");
 }
 int main(void) { tc_begin(); TC_RUN(btowc_ascii); TC_RUN(btowc_eof); TC_RUN(wctob_ascii); TC_RUN(wctob_weof); TC_RUN(cp1252_euro_both_ways); return tc_end(); }

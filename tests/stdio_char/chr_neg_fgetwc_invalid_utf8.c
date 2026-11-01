@@ -5,11 +5,12 @@
  * crt:   win10
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs fopen (ccs=UTF-8), fgetwc
  * note:  PROBE: decoder error handling on a ccs=UTF-8 stream. Bytes 41 FF 42: the first character 'A' is certain,
  *        the probe is that the invalid byte 0xFF (never valid in UTF-8) makes fgetwc return WEOF. Narrowed to the UCRT:
  *        the hand-written UTF-8 decoders of msvcr80-120 may map invalid bytes differently (unknown), so they are not claimed.
+ *        OBSERVED (Win10 22H2, class A): bytes 41 FF 42 read as L'A', U+FFFD, L'B', WEOF (raw: b == WEOF got=0xfffd).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -31,6 +32,10 @@ TC_CASE(bad_byte)
     if (!f) { remove(FN); return; }
     a = fgetwc(f);
     CHECK_EQ_U(a, 0x41);
+    b = fgetwc(f);
+    CHECK_EQ_U(b, 0xFFFD);   /* observed: invalid byte decodes to U+FFFD, not WEOF */
+    b = fgetwc(f);
+    CHECK_EQ_U(b, 0x42);     /* and decoding resumes at the next byte */
     b = fgetwc(f);
     CHECK_EQ_U(b, WEOF);
     fclose(f); remove(FN);

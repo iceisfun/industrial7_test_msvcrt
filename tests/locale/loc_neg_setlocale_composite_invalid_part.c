@@ -5,11 +5,16 @@
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs setlocale (LC_ALL composite string "LC_COLLATE=...;LC_CTYPE=..." form; NULL returned when the locale cannot be honoured, current locale unchanged)
- * note:  The composite format here is the one setlocale(LC_ALL, NULL) returns, with one component naming a nonexistent locale. A failed
+ * note:  Win10 triage (class B): ucrtbase 19045 accepts the composite and leaves LC_CTYPE (the unknown component) at its previous value, returning
+ *        the unchanged composite; observed on Windows 10 22H2 build 19045, deviates from the MS docs setlocale NULL-on-failure statement.
+ *        The composite format here is the one setlocale(LC_ALL, NULL) returns, with one component naming a nonexistent locale. A failed
  *        setlocale must leave every category unchanged (no partial application).
  *        "C;C" is not a composite in that form; only the NULL-or-unchanged invariant on LC_COLLATE is asserted for it.
+ *        [scope] observed on ucrtbase 19045 only; the legacy CRTs listed in crt: are [unverified] until the P3 runs.
+ *        [env] user-default locale en-US, build 19045; not stable on a VM with another user locale/NLS data.
+ *        [env] the name "zz" is a valid locale name on build 19045 (observed); "zz_nowhere" is rejected (observed).
  */
 #include "tc.h"
 #include <locale.h>
@@ -36,7 +41,11 @@ TC_CASE(setup)
 }
 TC_CASE(invalid_component)
 {
-    CHECK(setlocale(LC_ALL, n_bad) == NULL);
+    /* Win10 22H2 ucrtbase (observed): a composite LC_ALL string with an unknown component is NOT rejected. setlocale returns the (unchanged) composite
+     * string, silently keeping the previous setting of the unknown component. Deviates from the documented "NULL if the selection cannot be honored". */
+    const char *r = setlocale(LC_ALL, n_bad);
+    CHECK(r != NULL);
+    CHECK_STR(r, saved);
     CHECK_STR(setlocale(LC_ALL, NULL), saved);
 }
 TC_CASE(too_few_components)

@@ -6,13 +6,15 @@
  * crt:   ucrtbase msvcr120
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.3.2 / Annex G (errno not required for complex functions)
- * note:  PROBING: errno is left at a sentinel and the invalid-parameter handler is not called by clog(0), catanh(1),
+ * note:  OBSERVED on Win10 22H2 (ucrtbase): clog(0), catanh(1), cexp(1000) set errno=ERANGE (34) via the underlying real-math calls; ctan(inf+1i) leaves errno untouched.
+ *        The invalid-parameter handler is never called. (The id keeps its historical name.) PROBING: errno is left at a sentinel and the invalid-parameter handler is not called by clog(0), catanh(1),
  *        cexp(1000), ctan(inf+1i). Real Windows might set ERANGE/EDOM through underlying real-math calls.
  */
 #include "tc.h"
 #include <math.h>
+#include <errno.h>
 typedef struct { double re, im; } cplx;   /* MS _Dcomplex: 16 bytes, hidden pointer on x64 */
 typedef cplx (__cdecl *cfn_t)(cplx);
 static volatile double v_zero = 0.0, v_one = 1.0;
@@ -42,9 +44,9 @@ static int run(const char *name, double re, double im)
     CHECK_EQ_I(tc_iph_count, 0);
     return e;
 }
-TC_CASE(clog_zero) { CHECK_EQ_I(run("clog", 0.0, 0.0), 0x5a5a); }
-TC_CASE(catanh_one) { CHECK_EQ_I(run("catanh", 1.0, 0.0), 0x5a5a); }
-TC_CASE(cexp_1000) { CHECK_EQ_I(run("cexp", 1000.0, 0.0), 0x5a5a); }
+TC_CASE(clog_zero) { CHECK_EQ_I(run("clog", 0.0, 0.0), ERANGE); }
+TC_CASE(catanh_one) { CHECK_EQ_I(run("catanh", 1.0, 0.0), ERANGE); }
+TC_CASE(cexp_1000) { CHECK_EQ_I(run("cexp", 1000.0, 0.0), ERANGE); }
 TC_CASE(ctan_inf) { CHECK_EQ_I(run("ctan", PINF(), 1.0), 0x5a5a); }
 
 int main(void) { tc_begin(); TC_RUN(clog_zero); TC_RUN(catanh_one); TC_RUN(cexp_1000); TC_RUN(ctan_inf); return tc_end(); }

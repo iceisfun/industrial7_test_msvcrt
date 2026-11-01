@@ -6,11 +6,13 @@
  * crt:   >=80
  * tier:  p2
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs wcscpy_s / wcsncpy_s / wcscat_s / wcsncat_s (dest NULL or size 0 -> EINVAL)
  * note:  Probes the dest==NULL, size==0 corner. Expected: wcscpy_s and wcscat_s EINVAL with one handler call.
  *        wcsncpy_s(NULL,0,src,0) is believed to be the special "nothing to do" success (0, no handler call);
  *        wcsncat_s(NULL,0,src,0) is believed to be EINVAL with one handler call. These last two are the real probes.
+ *        Observed Win10 22H2 ucrtbase: wcsncat_s(NULL,0,src,0) returns 0 with NO handler call (count==0 is a no-op success, like
+ *        wcsncpy_s); the other three behave as expected. Stable.
  */
 #include "tc.h"
 #include <wchar.h>
@@ -45,7 +47,7 @@ TC_CASE(ncat_null_0_count0)
 {
     int r; if (!tc_p_wcsncat_s || !tc_iph_install()) TC_SKIP("missing");
     tc_iph_count = 0; r = tc_p_wcsncat_s(vnull, 0, vsrc, 0);
-    CHECK_EQ_I(r, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 0); CHECK_EQ_I(tc_iph_count, 0);   /* observed */
 }
 int main(void)
 {

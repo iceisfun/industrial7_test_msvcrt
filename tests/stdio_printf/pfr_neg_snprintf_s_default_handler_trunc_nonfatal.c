@@ -35,6 +35,7 @@ int main(void)
 #endif
     if ((c = tc_child_name()) != NULL) {
         char b[16]; int r;
+        tc_iph_default();
         if (c[0] == 't') {
             r = SNPF_S(b, 4, TC_TRUNC, "%s", "abcdef");
             return (r == -1 && b[0] == 'a' && b[3] == 0) ? 77 : 78;

@@ -26,7 +26,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) { qsort(NULL, 1, 1, cmp); tc_write("POST-CALL-MARKER\n"); return 77; }
+    if ((c = tc_child_name()) != NULL) { tc_iph_default(); qsort(NULL, 1, 1, cmp); tc_write("POST-CALL-MARKER\n"); return 77; }
     TC_RUN(child_terminates);
     return tc_end();
 }

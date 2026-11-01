@@ -5,11 +5,12 @@
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90
  * tier:  p2
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs Parameter validation (termination only)
- * note:  Probes exact termination status of the default invalid-parameter path. ucrtbase on a fast-fail capable OS (Win8+/Win10):
- *        believed 0xC0000409 (__fastfail). The VC9-VC12 runtimes: either 0xC0000409 or STATUS_INVALID_CRUNTIME_PARAMETER 0xC0000417
- *        is accepted (which one depends on the CRT version and OS fast-fail support). An access violation must never be the status.
+ * note:  Observed on Win10 22H2 19045 ucrtbase: with the CRT's default invalid-parameter handler restored in the child
+ *        (tc_iph_default(); the mingw startup installs a no-op handler that made the child just return 77) strcpy_s(d, 0, "x")
+ *        and memcpy_s(d, 8, src, 16) ends the process with STATUS_STACK_BUFFER_OVERRUN 0xC0000409 (fast-fail). Stable over
+ *        repeated runs. Fatal path runs in a child process.
  */
 #define MINGW_HAS_SECURE_API 1
 #include "tc.h"
@@ -21,6 +22,7 @@ static volatile size_t v0 = 0, v8 = 8;
 static int child_main(const char *n)
 {
     char d[8] = "ab";
+    tc_iph_default();
     if (tc_strequ(n, "strcpy")) strcpy_s(d, v0, "x");
     else if (tc_strequ(n, "memcpy")) memcpy_s(d, v8, "0123456789abcdef", 16);
     return 77;
@@ -28,7 +30,7 @@ static int child_main(const char *n)
 static DWORD run(const char *n) { DWORD code = 77; int ran = tc_spawn_self(n, &code, 20000); CHECK(ran); return code; }
 static void chk(DWORD c)
 {
-#ifdef TC_UCRT
+#if TC_CRT_VER >= 140   /* tc.py defines _UCRT, never TC_UCRT, so the old #ifdef TC_UCRT always took the relaxed branch */
     CHECK_EQ_U(c, TC_STATUS_FASTFAIL);
 #else
     CHECK(c == TC_STATUS_FASTFAIL || c == TC_STATUS_INVALID_CRT_PARAM);

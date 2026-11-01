@@ -8,7 +8,9 @@
  * tier:  p0
  * conf:  documented
  * ref:   MS docs sprintf_s, _sprintf_p ("if the buffer is too small ... buffer[0] set to 0, invalid parameter handler invoked, returns -1")
- * note:  errno values are deliberately NOT asserted here (see pfp_neg_sprintf_s_errno_probe).
+ * note:  OBSERVED Win10 22H2 19045 ucrtbase (run twice): _sprintf_p with a too-small buffer returns -2 (raw worker code; sprintf_s-style -1 is not used), leaves the truncated "123" + NUL,
+ *        no invalid-parameter call. The old -1 expectation for sprintf_p_too_small was wrong.
+ *        errno values are deliberately NOT asserted here (see pfp_neg_sprintf_s_errno_probe).
  *        Guard bytes after the stated buffer size must stay untouched.
  */
 #include "tc.h"
@@ -63,7 +65,7 @@ TC_CASE(sprintf_p_too_small)
     char b[32]; volatile int v = 12345; int r;
     fill(b, 32); tc_iph_count = 0;
     r = _sprintf_p(b, 4, "%1$d", v);
-    CHECK_EQ_I(r, -1);
+    CHECK_EQ_I(r, -2); CHECK_STR(b, "123"); CHECK_EQ_I(tc_iph_count, 0);
     CHECK(guard_ok(b, 4, 32));
 }
 TC_CASE(sprintf_p_fits)

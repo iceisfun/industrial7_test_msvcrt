@@ -24,7 +24,7 @@ TC_CASE(exact_status)
 int main(void)
 {
     tc_begin();
-    if (tc_child_name()) { qsort(NULL, 1, 1, cmp); return 77; }
+    if (tc_child_name()) { tc_iph_default(); qsort(NULL, 1, 1, cmp); return 77; }
     TC_RUN(exact_status);
     return tc_end();
 }

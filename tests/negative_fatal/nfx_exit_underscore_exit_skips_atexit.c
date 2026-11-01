@@ -3,21 +3,22 @@
  * area:  negative_fatal
  * kind:  positive
  * funcs: _exit  exit
- * procs: _onexit
+ * procs: _crt_atexit _onexit
  * crt:   all
  * tier:  p0
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _exit, _cexit ("_exit ... does not process atexit or _onexit")
- * note:  _exit terminates without running registered handlers; exit runs them.
+ * note:  D: ucrtbase.dll does not export _onexit (old code crashed 0xc0000005 calling a NULL pointer); registration goes through tc_reg_atexit() (tc.h): the real export _crt_atexit where present, else _onexit (legacy CRTs).
+ *        Observed on ucrtbase: _exit(12) skips the registered handler (exit code 12),
+ *        exit(12) runs it (handler _exit(99)). Stable. Documented behaviour of _exit per MS docs _exit/_cexit.
  */
 #include "tc.h"
 #include <stdlib.h>
 #include <limits.h>
 
-TC_DECL_PROC(_onexit_t, _onexit, (_onexit_t));
 
 
-static int __cdecl h(void) { _exit(99); return 0; }
+static void __cdecl h(void) { _exit(99); }
 
 TC_CASE(_exit_skips)
 {
@@ -33,9 +34,8 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    TC_LOAD_PROC(_onexit);
     if ((c = tc_child_name()) != NULL) {
-        if (!tc_p__onexit(h)) return 50;
+        if (tc_reg_atexit(h)) return 50;
         if (c[0] == 's') _exit(12);
         exit(12);
     }

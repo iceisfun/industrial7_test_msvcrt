@@ -5,9 +5,10 @@
  * procs: time clock gmtime localtime asctime strftime wcsftime _mktime64 _time64 _localtime64 _gmtime64 _difftime64 _tzset _strdate _strtime _ftime64 _utime64
  * crt:   all
  * tier:  p0
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs time functions (64-bit variants VS2005+, and msvcrt.dll XP+)
  * note:  difftime, mktime and ctime are covered per name by exp_probe_time_inline_exports (they are inline wrappers in some CRT headers).
+ *        Fix: ucrtbase does not export time/gmtime/localtime (observed: GetProcAddress NULL); the skip was keyed on TC_UCRT, which the build never defines (it defines _UCRT).
  */
 #include "tc.h"
 
@@ -27,7 +28,7 @@ TC_CASE(iso_c_group)
 
 TC_CASE(old_iso_c_group)
 {
-#ifdef TC_UCRT
+#if defined(TC_UCRT) || defined(_UCRT)   /* tc.h documents TC_UCRT but the build only defines _UCRT */
     TC_SKIP("ucrtbase exports only the _time32/_time64 families; time/gmtime/localtime are inline in its headers");
 #else
     static const char *const names[] = { "time", "gmtime", "localtime" };

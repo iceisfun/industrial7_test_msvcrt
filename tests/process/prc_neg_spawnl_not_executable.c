@@ -5,9 +5,12 @@
  * crt:   all
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _spawn: ENOEXEC = file is not executable or has an invalid executable-file format
- * note:  File is named .exe so the CRT hands it straight to CreateProcess (ERROR_BAD_EXE_FORMAT -> ENOEXEC) regardless of extension handling.
+ * note:  OBSERVED on Win10 22H2 (19045): _spawnl/_wspawnl on a .exe file holding plain text return -1 with errno EINVAL, not
+ *        ENOEXEC: CreateProcess fails with GetLastError 216 (ERROR_EXE_MACHINE_TYPE_MISMATCH), _doserrno 216, mapped to EINVAL
+ *        by the CRT. Depends on what CreateProcess returns for non-PE files on build 19045 [not verified on other builds];
+ *        deterministic here.
  */
 #include "tc.h"
 #include <process.h>
@@ -37,7 +40,7 @@ TC_CASE(spawnl_text_file)
     CHECK(make_file());
     errno = 0;
     r = _spawnl(m, FN, FN, NULL);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, ENOEXEC);
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL);   /* observed: CreateProcess fails with ERROR_EXE_MACHINE_TYPE_MISMATCH (216), which the CRT maps to EINVAL, not ENOEXEC */
     del_retry(FN);
 }
 TC_CASE(wspawnl_text_file)
@@ -46,7 +49,7 @@ TC_CASE(wspawnl_text_file)
     CHECK(make_file());
     errno = 0;
     r = _wspawnl(m, L"" FN, L"" FN, NULL);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, ENOEXEC);
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL);   /* observed: CreateProcess fails with ERROR_EXE_MACHINE_TYPE_MISMATCH (216), which the CRT maps to EINVAL, not ENOEXEC */
     del_retry(FN);
 }
 

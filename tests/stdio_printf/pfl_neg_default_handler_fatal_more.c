@@ -8,7 +8,8 @@
  * conf:  documented
  * ref:   MS docs "Parameter validation", _set_invalid_parameter_handler (no handler installed: the process is terminated)
  * note:  Each child triggers one invalid-parameter path with the DEFAULT handler and must terminate abnormally (exit code neither 0 nor the
- *        survival marker 77). The exact status is probed in pfl_neg_default_handler_fatal_status_probe.
+ *        survival marker 77). The child restores the CRT default with tc_iph_default() first (the mingw-w64 startup installs a no-op handler,
+ *        which otherwise makes every child survive). The exact status is probed in pfl_neg_default_handler_fatal_status_probe.
  *        The control child proves the harness path (no failing call -> exit 77).
  */
 #include "tc.h"
@@ -22,6 +23,7 @@ static int child_main(const char *c)
 {
     _locale_t l = _create_locale(LC_ALL, "C"); char b[16]; wchar_t w[16]; int n = 1;
     if (!l) return 78;
+    tc_iph_default();
     if (tc_strequ(c, "printf_null")) pl_printf_l(v_nof, l);
     else if (tc_strequ(c, "snprintf_pctn")) pl_snprintf_l(b, 16, "%n", l, &n);
     else if (tc_strequ(c, "swprintf_nullfmt")) pl_swprintf_l(w, v_nowf, l);

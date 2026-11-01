@@ -6,9 +6,11 @@
  * crt:   ucrtbase msvcr120 msvcr110
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.29.6.4.1, 7.29.6.4.2
  * note:  PROBES: after an encoding error the *src pointer is left at the start of the offending sequence (C11: just past the last character converted). MS behaviour on error is not documented.
+ *        Observed Win10 22H2 ucrtbase (CP932): "a\x82 b" is not an error (returns 3, src becomes NULL); the error input is now "a\x82"
+ *        (lead byte then NUL). Stable.
  */
 #include "tc.h"
 #include <wchar.h>
@@ -28,7 +30,7 @@ TC_DECL_PROC(size_t, wcsrtombs, (char *, const wchar_t **, size_t, void *));
 
 TC_CASE(mbsrtowcs_src)
 {
-    mbs_t st; wchar_t d[8]; static const char s[] = "a\x82 b"; const char *src = s;
+    mbs_t st; wchar_t d[8]; static const char s[] = "a\x82"; const char *src = s;   /* "a\x82 b" is accepted on Windows */
     if (!tc_p_mbsrtowcs) TC_SKIP("mbsrtowcs not exported");
     if (!set932()) TC_SKIP("cp932 locale unavailable");
     memset(&st, 0, sizeof st);

@@ -20,7 +20,9 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
-        char b[16]; volatile size_t two = 2; const char *volatile nf = NULL;
+        char b[16]; volatile size_t two = 2;
+        tc_iph_default(); /* mingw startup installs a no-op handler; restore the CRT default */
+ const char *volatile nf = NULL;
         if (c[0] == 's') sprintf_s(b, two, "abc");
         else printf_s(nf);
         return 77;

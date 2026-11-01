@@ -5,8 +5,10 @@
  * funcs: freopen fopen _fcloseall
  * crt:   >=80
  * tier:  p0
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs freopen (invalid NULL mode -> invalid parameter handler, EINVAL)
+ * note:  TRIAGE win1093[34])?#934, class A): case name_and_mode_null on ucrtbase 10.0.19045: freopen(NULL, NULL, fp) returns NULL with errno EBADF (9) and does NOT
+ *        call the invalid-parameter handler (observed got=9, iph 0); case mode_null (name given, mode NULL) still sees EINVAL + handler. Old expectation kept for non-UCRT.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -48,7 +50,12 @@ TC_CASE(name_and_mode_null)
     fp = fopen(F, "r"); CHECK(fp != NULL); if (!fp) return;
     tc_iph_count = 0; errno = 0;
     r = freopen(nm, m, fp);
-    CHECK(r == NULL); CHECK_EQ_I(errno, EINVAL); CHECK(tc_iph_count >= 1);
+    CHECK(r == NULL);
+#if TC_AT_LEAST(140)
+    CHECK_EQ_I(errno, EBADF); CHECK_EQ_I(tc_iph_count, 0);   /* observed ucrtbase 10.0.19045: no handler call */
+#else
+    CHECK_EQ_I(errno, EINVAL); CHECK(tc_iph_count >= 1);
+#endif
     _fcloseall();  /* stream may or may not have been closed by the failed call */
     DeleteFileA(F);
 }

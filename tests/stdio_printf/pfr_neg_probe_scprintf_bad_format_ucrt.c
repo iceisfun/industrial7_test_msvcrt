@@ -5,11 +5,12 @@
  * funcs: _scprintf _scwprintf _vscprintf
  * crt:   ucrtbase
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf format specification; UCRT parameter validation of format strings
- * note:  PROBE: the length-counting functions reject a malformed format like sprintf does: return -1, errno EINVAL,
- *        invalid-parameter handler called once. Probed formats: lone trailing '%' after text, unknown conversion '%y'
+ * note:  OBSERVED: the length-counting functions do not validate the format (like sprintf): "abc%" -> 3, "%y" -> 1, errno 0,
+ *        no invalid-parameter handler call. Probed formats: lone trailing '%' after text, unknown conversion '%y'
  *        (narrow, wide and va_list forms).
+ *        Observed on Win10 22H2 19045 ucrtbase: the non-_s printf family does not validate format strings (no handler call, no errno); the bad conversion char is copied through.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -25,28 +26,28 @@ TC_CASE(trailing_percent)
     const char *volatile f = "abc%"; int r;
     tc_iph_count = 0; errno = 0;
     r = _scprintf(f);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 3); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(unknown_conv)
 {
     const char *volatile f = "%y"; int r;
     tc_iph_count = 0; errno = 0;
     r = _scprintf(f);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 1); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(wide_unknown_conv)
 {
     const wchar_t *volatile f = L"%y"; int r;
     tc_iph_count = 0; errno = 0;
     r = _scwprintf(f);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 1); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(vscprintf_unknown_conv)
 {
     const char *volatile f = "%y"; int r;
     tc_iph_count = 0; errno = 0;
     r = vc(f, 1);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 1); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 int main(void)
 {

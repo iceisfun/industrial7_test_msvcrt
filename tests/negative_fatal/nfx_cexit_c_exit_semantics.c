@@ -3,7 +3,7 @@
  * area:  negative_fatal
  * kind:  positive
  * funcs: _cexit _c_exit  _exit
- * procs: _onexit
+ * procs: _onexit _crt_atexit
  * crt:   all
  * tier:  p1
  * conf:  documented
@@ -15,6 +15,13 @@
 #include <limits.h>
 
 TC_DECL_PROC(_onexit_t, _onexit, (_onexit_t));
+#if TC_CRT_VER >= 140
+/* ucrtbase does NOT export _onexit (class D: the old GetProcAddress("_onexit") gave NULL and every call crashed with 0xC0000005);
+ * the toolchain's static _onexit registers through the exported _crt_atexit. Older CRTs still export it. */
+#define TC_ONEXIT(f) _onexit(f)
+#else
+#define TC_ONEXIT(f) tc_p__onexit(f)
+#endif
 
 
 static volatile int flag;
@@ -34,9 +41,9 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    TC_LOAD_PROC(_onexit);
+    TC_LOAD_PROC(_onexit);   /* NULL on ucrtbase, unused there */
     if ((c = tc_child_name()) != NULL) {
-        if (!tc_p__onexit(h)) return 50;
+        if (!TC_ONEXIT(h)) return 50;
         if (c[1] == 'e') { _cexit(); _exit(flag ? 20 : 21); }
         _c_exit();
         _exit(flag ? 23 : 22);

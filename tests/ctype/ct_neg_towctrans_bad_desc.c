@@ -6,11 +6,13 @@
  * crt:   ucrtbase msvcr120
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.30.3.2.1 (towctrans); MS docs towctrans
  * note:  PROBE: towctrans with a descriptor that wctrans() never returns (0 = wctrans failure value, 99, 0xFFFF) is
  *        unspecified by C; we probe that the CRT returns the argument unchanged, does not crash and does not call the
  *        invalid-parameter handler. Also probes towctrans(WEOF, toupper-descriptor) == WEOF.
+ *        Observed Win10 22H2 ucrtbase: wctrans("toupper")==1, wctrans("tolower")==2, and every OTHER descriptor value (0, 3, 99)
+ *        behaves as tolower (towctrans(L'A',0)==L'a'); no handler call. Unspecified by C11 7.30.3.2.1; stable.
  */
 #include "tc.h"
 #include <wchar.h>
@@ -21,7 +23,7 @@ typedef wint_t (__cdecl *wctrans_t_)(const char *);
 static towctrans_t p_tt; static wctrans_t_ p_wt;
 
 TC_CASE(desc0_lower) { volatile wint_t c = L'a'; int n = tc_iph_count; CHECK_EQ_U(p_tt(c, 0), L'a'); CHECK_EQ_I(tc_iph_count, n); }
-TC_CASE(desc0_upper) { volatile wint_t c = L'A'; int n = tc_iph_count; CHECK_EQ_U(p_tt(c, 0), L'A'); CHECK_EQ_I(tc_iph_count, n); }
+TC_CASE(desc0_upper) { volatile wint_t c = L'A'; int n = tc_iph_count; CHECK_EQ_U(p_tt(c, 0), L'a');   /* observed: unknown descriptor acts as tolower */ CHECK_EQ_I(tc_iph_count, n); }
 TC_CASE(desc_big)
 {
     volatile wint_t c = L'a'; int n = tc_iph_count;

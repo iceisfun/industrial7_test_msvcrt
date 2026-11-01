@@ -29,7 +29,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) {
+    if ((c = tc_child_name()) != NULL) { tc_iph_default();
         /* valid locale so that only parameter validation can terminate the child */
         _locale_t l = _create_locale(LC_ALL, "C");
         if (l == NULL) return 78;

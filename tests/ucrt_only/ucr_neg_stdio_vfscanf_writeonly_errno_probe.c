@@ -6,10 +6,11 @@
  * procs: __stdio_common_vfscanf
  * crt:   win10
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs fscanf / _filbuf (reading a stream not opened for reading)
  * note:  PROBES that reading from a "w" stream sets errno to EBADF (return EOF and target untouched are in
  *        ucr_neg_stdio_vfscanf_bad_stream). temp file tc_ucr_neg_stdio_vfscanf_writeonly_errno_probe_a.tmp
+ * note:  OBSERVED (Win10 22H2 19045; raw "errno == EBADF got=0"): reading from a "w" stream returns EOF but leaves errno unchanged. Class A.
  */
 #include "tc.h"
 #include <stdarg.h>
@@ -29,7 +30,7 @@ TC_CASE(errno_ebadf)
     CHECK(f != NULL); if (!f) return;
     errno = 0;
     r = xf(f, "%d", &a);
-    CHECK_EQ_I(r, EOF); CHECK_EQ_I(errno, EBADF);
+    CHECK_EQ_I(r, EOF); CHECK_EQ_I(errno, 0);   /* observed Win10 22H2: errno is left unchanged */
     fclose(f); remove(TMP);
 }
 

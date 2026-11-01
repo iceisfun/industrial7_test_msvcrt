@@ -6,10 +6,14 @@
  * crt:   ucrtbase
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs fseek, _fseeki64, fread (EINVAL / invalid parameter; size or count 0 returns 0)
  * note:  PROBE: _o_ stream aliases validate whence/offset like fseek/fread. Uses fopen/fclose/remove from the CRT as plain helpers.
  *        The _o_ aliases are undocumented; expectations mirror the documented behaviour of the underlying function.
+ * note:  DUAL STATE (Win10 22H2 19045 ucrtbase; analysis: every _o_ export runs inside __crt_state_management::wrapped_invoke, which switches to the
+ *        separate OS-state errno and invalid-parameter handler; audit probe: _o__read(9999) -> app errno 0 / *_o__errno()=9 / OS handler 1). So the APP-state
+ *        errno and handler (errno, _set_invalid_parameter_handler) stay untouched (asserted == 0 here) while the error contract is visible in the OS state
+ *        (_o__errno, _o__set_invalid_parameter_handler), which is asserted with the plain-function values. Deterministic.
  */
 #include "tc.h"
 #include <errno.h>
@@ -36,38 +40,41 @@ TC_CASE(fseek_bad_whence)
 {
     FILE *fp; int r;
     if (!p_fseek) TC_SKIP("not exported");
-    if (!tc_iph_install()) TC_SKIP("no handler api");
+    if (!(tc_iph_install() && tc_oiph_install())) TC_SKIP("no handler api");
     fp = mk(); CHECK(fp != NULL); if (!fp) return;
-    tc_iph_count = 0; errno = 0; r = p_fseek(fp, 0, bad_whence);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    tc_iph_count = 0; errno = 0; tc_o_reset(); r = p_fseek(fp, 0, bad_whence);
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);   /* app state untouched */
+    CHECK_EQ_I(tc_o_errno(), EINVAL); CHECK_EQ_I(tc_oiph_count, 1);        /* OS state carries the contract */
     fclose(fp); remove(fname);
 }
 TC_CASE(fseeki64_negative)
 {
     FILE *fp; int r;
     if (!p_fseeki64) TC_SKIP("not exported");
-    if (!tc_iph_install()) TC_SKIP("no handler api");
+    if (!(tc_iph_install() && tc_oiph_install())) TC_SKIP("no handler api");
     fp = mk(); CHECK(fp != NULL); if (!fp) return;
-    errno = 0; r = p_fseeki64(fp, neg1, SEEK_SET);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL);
+    errno = 0; tc_o_reset(); r = p_fseeki64(fp, neg1, SEEK_SET);
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, 0);
+    CHECK_EQ_I(tc_o_errno(), EINVAL);
     fclose(fp); remove(fname);
 }
 TC_CASE(fseek_before_start_keeps_position)
 {
     FILE *fp; int r;
     if (!p_fseek || !p_ftell) TC_SKIP("not exported");
-    if (!tc_iph_install()) TC_SKIP("no handler api");
+    if (!(tc_iph_install() && tc_oiph_install())) TC_SKIP("no handler api");
     fp = mk(); CHECK(fp != NULL); if (!fp) return;
     CHECK_EQ_I(p_fseek(fp, 4, SEEK_SET), 0);
-    errno = 0; r = p_fseek(fp, -5, SEEK_CUR);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL);
+    errno = 0; tc_o_reset(); r = p_fseek(fp, -5, SEEK_CUR);
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, 0);
+    CHECK_EQ_I(tc_o_errno(), EINVAL);
     fclose(fp); remove(fname);
 }
 TC_CASE(fseek_before_start_keeps_position_probe)  /* isolated guess: failed fseek leaves position unchanged (not stated by C11) */
 {
     FILE *fp; long pos;
     if (!p_fseek || !p_ftell) TC_SKIP("not exported");
-    if (!tc_iph_install()) TC_SKIP("no handler api");
+    if (!(tc_iph_install() && tc_oiph_install())) TC_SKIP("no handler api");
     fp = mk(); CHECK(fp != NULL); if (!fp) return;
     CHECK_EQ_I(p_fseek(fp, 4, SEEK_SET), 0);
     p_fseek(fp, -5, SEEK_CUR);
@@ -78,12 +85,13 @@ TC_CASE(fread_zero)
 {
     FILE *fp; char b[8]; size_t r;
     if (!p_fread) TC_SKIP("not exported");
-    if (!tc_iph_install()) TC_SKIP("no handler api");
+    if (!(tc_iph_install() && tc_oiph_install())) TC_SKIP("no handler api");
     fp = mk(); CHECK(fp != NULL); if (!fp) return;
-    tc_iph_count = 0; errno = 0;
+    tc_iph_count = 0; errno = 0; tc_o_reset();
     r = p_fread(b, zero, 5, fp); CHECK_EQ_U(r, 0);
     r = p_fread(b, 5, zero, fp); CHECK_EQ_U(r, 0);
     CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
+    CHECK_EQ_I(tc_o_errno(), 0); CHECK_EQ_I(tc_oiph_count, 0);
     fclose(fp); remove(fname);
 }
 int main(void)

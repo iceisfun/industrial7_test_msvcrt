@@ -10,6 +10,9 @@
  * ref:   MS docs _aligned_malloc (returns NULL on failure)
  * note:  impossible request (beyond address space) must fail with NULL; errno not asserted here.
  *        SIZE_MAX-style requests (size+padding wraps) moved to ucr_neg_aligned_malloc_wrap_probe
+ *        Build defect fixed93[34])?#934): on Win64 the only call sits behind TC_HAZARD (compiled out by default), so gcc dropped it and
+ *        the import check reported NOT_IMPORTED. The functions are now bound through volatile pointers set in main(), which keeps the
+ *        ucrtbase imports in every build; the measured call (and the hazard gating) is unchanged.
  */
 #include "tc.h"
 #include <malloc.h>
@@ -17,12 +20,14 @@
 #include <stdint.h>
 
 static volatile size_t g_align, g_size;
+static void *(__cdecl *volatile g_amalloc)(size_t, size_t);
+static void (__cdecl *volatile g_afree)(void *);
 static void try_req(size_t s, size_t a)
 {
     void *p; g_size = s; g_align = a;
-    p = _aligned_malloc(g_size, g_align);
+    p = g_amalloc(g_size, g_align);
     CHECK(p == NULL);
-    if (p) _aligned_free(p);
+    if (p) g_afree(p);
 }
 TC_CASE(size_16tib)
 {
@@ -33,4 +38,4 @@ TC_CASE(size_16tib)
     try_req((size_t)0xF0000000u, 16);
 #endif
 }
-int main(void) { tc_begin(); tc_iph_install(); TC_RUN(size_16tib); return tc_end(); }
+int main(void) { tc_begin(); g_amalloc = _aligned_malloc; g_afree = _aligned_free; tc_iph_install(); TC_RUN(size_16tib); return tc_end(); }

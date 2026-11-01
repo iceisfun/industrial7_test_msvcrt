@@ -5,10 +5,13 @@
  * crt:   all
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _exit, _cexit: _exit terminates the process without atexit/_onexit processing and without flushing stream buffers
  * note:  Child opens a file, fputs a short string (buffered, below buffer size) and calls _exit(0). The file must still be empty.
  *        Control case: same child with fflush before _exit; the file then holds the whole string.
+ *        Win10 22H2 19045 (observed): the MS docs say _exit does not flush stream buffers, but on the real ucrtbase the buffered "hello-buffered"
+ *        ends up in the file anyway (size 14; the stream is flushed during process teardown). Case unflushed_lost asserts the observed size.
+ *        [unverified] on other CRTs: only ucrtbase 19045 was observed; the expectation is gated with TC_AT_LEAST(140) and the original expectation (file stays empty) is kept for older CRTs.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -30,7 +33,11 @@ TC_CASE(unflushed_lost)
     DWORD c = 99; remove(FN_A);
     CHECK(tc_spawn_self("noflush", &c, 20000));
     CHECK_EQ_U(c, 0);
+#if TC_AT_LEAST(140)
+    CHECK_EQ_I(fsize(FN_A), (long)(sizeof text - 1));   /* observed on Win10 19045: the data reached the file although _exit(0) skipped fflush */
+#else
     CHECK_EQ_I(fsize(FN_A), 0);
+#endif
     remove(FN_A);
 }
 TC_CASE(control_flushed)

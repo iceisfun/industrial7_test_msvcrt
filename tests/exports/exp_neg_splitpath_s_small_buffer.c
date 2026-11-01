@@ -3,11 +3,13 @@
  * area:  exports
  * funcs:
  * procs: _splitpath_s _makepath_s
- * crt:   >=80
+ * crt:   ucrtbase
  * tier:  p2
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _splitpath_s / _makepath_s: ERANGE when a buffer is too small, EINVAL for NULL path
+ * note:  OBSERVED (Win10 22H2 19045; raw "tc_iph_count > 0" failed in fname_too_small_erange): a too-small component buffer returns
+ *        ERANGE without invoking the invalid-parameter handler (NULL path and _makepath_s still do). Class A. Case 1 now observed-conf.
  */
 #include "tc.h"
 #include <errno.h>
@@ -24,7 +26,7 @@ TC_CASE(fname_too_small_erange)
     tc_iph_install(); tc_iph_count = 0;
     r = p_split("C:\\dir\\longname.txt", dr, sizeof dr, di, sizeof di, fn, sizeof fn, ex, sizeof ex);
     CHECK_EQ_I(r, ERANGE);
-    CHECK(tc_iph_count > 0);
+    CHECK_EQ_I(tc_iph_count, 0);   /* observed Win10 22H2: ERANGE for a too-small component buffer without calling the handler */
 }
 TC_CASE(null_path_einval)
 {

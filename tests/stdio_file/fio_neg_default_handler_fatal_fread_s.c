@@ -9,6 +9,8 @@
  * conf:  documented
  * ref:   MS docs fread_s (buffer too small -> invalid parameter handler invoked, returns 0); "Parameter validation"
  * note:  errno of the rejected call is covered by fio_neg_fread_s_buffer_small; here only termination and return/iph.
+ *        HARNESS FIX (class F, Win10 22H2): mingw crt2.o installs a no-op invalid-parameter handler at startup, so the child survived (exit 77 instead of
+ *        0xC0000409); the child now calls tc_iph_default() (tc.h) to restore the CRT default before the call under test.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -51,6 +53,7 @@ int main(void)
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
         char buf[2]; FILE *f; volatile size_t r;
+        tc_iph_default();  /* undo mingw startup no-op handler */
         TC_LOAD_PROC(fread_s); if (!tc_p_fread_s) return 78;
         f = fopen(NAME, "rb"); if (!f) return 79;
         r = tc_p_fread_s(buf, v2, v1, v8, f); (void)r;

@@ -6,10 +6,24 @@
  * procs: _ctime64_s
  * crt:   >=90 msvcrt
  * tier:  p0
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs ctime_s, _ctime64_s error conditions table (EINVAL for NULL/too small buffer, NULL or out-of-range time)
+ * note:  beyond_max uses 32536800000 (first rejected value on ucrtbase: EINVAL, errno 22, handler not called); 32535244800 is accepted there.
  */
 #include "tc.h"
+
+/* Observed limits of the real Windows 10 ucrtbase (build 19045): _MAX__TIME64_T = 32536799999 (3001-01-19 07:59:59 UTC) for local-time style
+ * conversions (_localtime64, _ctime64*, _wctime64*, _mktime64, _mkgmtime64, _futime64); _gmtime64 accepts [-43200, 32536850399].
+ * The MS docs say 3000-12-31 23:59:59 UTC / 1970-01-01; Windows is more permissive. Older CRTs keep the documented-era values (unverified). */
+#if TC_CRT_VER >= 140
+#define T64_LOCAL_BAD 32536800000LL
+#define T64_GM_BAD    32536850400LL
+#define T64_GM_NEG_BAD (-43201LL)
+#else
+#define T64_LOCAL_BAD 32535244800LL
+#define T64_GM_BAD    32535244800LL
+#define T64_GM_NEG_BAD (-1LL)
+#endif
 #include <time.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -35,7 +49,7 @@ TC_CASE(negative)
 TC_CASE(beyond_max)
 {
     char b[26]; int r; __time64_t t; NEED();
-    vt = 32535244800LL; t = vt; r = tc_p__ctime64_s(b, 26, &t);
+    vt = T64_LOCAL_BAD; t = vt; r = tc_p__ctime64_s(b, 26, &t);
     CHECK_EQ_I(r, EINVAL);
 }
 int main(void)

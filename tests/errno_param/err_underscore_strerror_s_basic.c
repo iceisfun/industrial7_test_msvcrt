@@ -4,8 +4,10 @@
  * funcs: _strerror_s strerror
  * crt:   >=90
  * tier:  p1
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _strerror_s, _strerror (message is newline-terminated)
+ * note:  Observed on Win10 22H2 19045 ucrtbase: _strerror_s writes "prefix: message" WITHOUT the trailing newline that the
+ *        _strerror docs describe (got "abc: Invalid argument", old want had a trailing LF).
  */
 #include "tc.h"
 #include <string.h>
@@ -18,7 +20,7 @@ TC_CASE(with_prefix)
     errno = EINVAL;
     r = _strerror_s(buf, sizeof buf, (const char *)pre);
     CHECK_EQ_I(r, 0);
-    strcpy(want, "abc: "); strcat(want, strerror(EINVAL)); strcat(want, "\n");
+    strcpy(want, "abc: "); strcat(want, strerror(EINVAL));
     CHECK_STR(buf, want);
 }
 TC_CASE(null_prefix)
@@ -27,7 +29,7 @@ TC_CASE(null_prefix)
     errno = ENOENT;
     r = _strerror_s(buf, sizeof buf, NULL);
     CHECK_EQ_I(r, 0);
-    strcpy(want, strerror(ENOENT)); strcat(want, "\n");
+    strcpy(want, strerror(ENOENT));
     CHECK_STR(buf, want);
 }
 int main(void)

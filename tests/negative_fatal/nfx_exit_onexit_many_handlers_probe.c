@@ -3,24 +3,25 @@
  * area:  negative_fatal
  * kind:  positive
  * funcs:  exit _exit
- * procs: _onexit
+ * procs: _crt_atexit _onexit
  * crt:   all
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.22.4.2; MS docs _onexit
- * note:  Probes that the handler table grows past 32 entries (33, 64, 129, 1024, 5000), each count in its own child. C only guarantees 32.
+ * note:  D: ucrtbase.dll does not export _onexit (NULL from GetProcAddress, old code crashed 0xc0000005), so registration goes through tc_reg_atexit() (tc.h): the real export _crt_atexit where present, else _onexit (legacy CRTs).
+ *        Observed on ucrtbase Win10 22H2: the table grows past 32 (33, 64, 129, 1024, 5000 handlers all run). Stable.
+ *        Legacy CRTs keep the original _onexit coverage [unverified on the reference].
  */
 #include "tc.h"
 #include <stdlib.h>
 #include <errno.h>
 
-TC_DECL_PROC(_onexit_t, _onexit, (_onexit_t));
 
 
 static volatile int count, want_n;
-static int __cdecl hc(void) { count++; return 0; }
+static void __cdecl hc(void) { count++; }
 /* registered first => runs last */
-static int __cdecl hfinal(void) { _exit(count == want_n - 1 ? 0 : 1); return 0; }
+static void __cdecl hfinal(void) { _exit(count == want_n - 1 ? 0 : 1); }
 
 static void run(const char *name)
 {
@@ -37,13 +38,12 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    TC_LOAD_PROC(_onexit);
     if ((c = tc_child_name()) != NULL) {
         int i, n = 0;
         for (c++; *c; c++) n = n * 10 + (*c - '0');
         want_n = n;
-        if (!tc_p__onexit(hfinal)) _exit(60);
-        for (i = 1; i < n; i++) if (!tc_p__onexit(hc)) _exit(61);
+        if (tc_reg_atexit(hfinal)) _exit(60);
+        for (i = 1; i < n; i++) if (tc_reg_atexit(hc)) _exit(61);
         exit(2);
     }
     TC_RUN(n33); TC_RUN(n64); TC_RUN(n129); TC_RUN(n1024); TC_RUN(n5000);

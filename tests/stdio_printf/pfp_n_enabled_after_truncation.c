@@ -5,10 +5,11 @@
  * procs: _set_printf_count_output
  * crt:   >=140
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _snprintf, printf type n
- * note:  PROBE: on ucrtbase, with a truncated _snprintf the %n count still counts all characters produced (7 for "abcdef1"), not only the 3 stored.
+ * note:  OBSERVED: on ucrtbase a truncated _snprintf returns -1 and never reaches a later %n (n stays untouched).
  *        Pre-UCRT behaviour is probed separately (pfp_n_trunc_old_probe).
+ *        A (test bug): observed n unchanged (-1) and return -1 on Win10 22H2 19045.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -18,8 +19,9 @@ TC_DECL_PROC(int, _set_printf_count_output, (int));
 TC_CASE(snprintf_count_full)
 {
     char b[8]; int n = -1;
-    _snprintf(b, 3, "abcdef%d%n", 1, &n);
-    CHECK_EQ_I(n, 7);
+    int r = _snprintf(b, 3, "abcdef%d%n", 1, &n);
+    CHECK_EQ_I(r, -1);
+    CHECK_EQ_I(n, -1);   /* output stops at the full buffer: %n is never reached */
 }
 int main(void)
 {

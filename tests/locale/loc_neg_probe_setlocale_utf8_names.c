@@ -5,10 +5,13 @@
  * crt:   ucrtbase
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs UTF-8 support in the UCRT (setlocale, Windows 10 1803+): ".UTF-8" / ".utf8" / ".65001" are valid code page suffixes
- * note:  PROBE: malformed UTF-8 locale names are believed to be rejected (NULL) by both setlocale and _create_locale (parity).
+ * note:  Win10 triage (class A, probe -> observed): ".65001x" is ACCEPTED by ucrtbase 19045 (trailing junk after the digits is ignored); the other
+ *        malformed names are rejected. Parity between setlocale and _create_locale is asserted in all cases.
+ *        Original PROBE: malformed UTF-8 locale names are believed to be rejected (NULL) by both setlocale and _create_locale (parity).
  *        ".utf8", "C.UTF-8" are NOT asserted (printed only). Each name is its own case. Restores "C".
+ *        [env] user-default locale en-US, build 19045; not stable on a VM with another user locale/NLS data.
  */
 #include "tc.h"
 #include <locale.h>
@@ -20,14 +23,22 @@ static void parity(const char *name, int want_null)
     const char *r; _locale_t l; v_n = name;
     r = setlocale(LC_ALL, v_n);
     l = _create_locale(LC_ALL, v_n);
-    if (want_null) CHECK(r == NULL);
+    if (want_null) CHECK(r == NULL); else CHECK(r != NULL);
     CHECK((r == NULL) == (l == NULL));
     if (l) _free_locale(l);
     setlocale(LC_ALL, "C");
 }
 TC_CASE(utf8x) { parity(".UTF-8x", 1); }
 TC_CASE(english_utf8_dot1) { parity("English_United States.UTF-8.1", 1); }
-TC_CASE(cp65001x) { parity(".65001x", 1); }
+TC_CASE(cp65001x)
+{
+    const char *r;
+    parity(".65001x", 0);
+    v_n = ".65001x"; r = setlocale(LC_ALL, v_n);
+    CHECK(r != NULL);
+    if (r) CHECK_STR(r, "English_United States.utf8");   /* name part depends on the VM user-default locale (en-US) */
+    setlocale(LC_ALL, "C");
+}   /* observed on Win10 22H2: accepted (setlocale returns "English_United States.utf8"), setlocale/_create_locale parity holds */
 TC_CASE(en_us_utf8_dot1) { parity("en-US.UTF-8.1", 1); }
 TC_CASE(diag_lenient_names)
 {

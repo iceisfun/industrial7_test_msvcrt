@@ -7,7 +7,8 @@
  * kind:  negative
  * conf:  inferred
  * ref:   MS docs _swprintf_p / _vswprintf_p (return -1 on error; count is capacity in wide chars including the terminator)
- * note:  Only return == -1 and no write past count are asserted. errno / handler / buf[0] state on truncation are in pfq_probe_neg_sprintf_p_small_buffer_state. %1$ls is used so the argument type does not depend on narrow/wide mode.
+ * note:  Only return == -1 and no write past count are asserted. Win10 22H2: on ucrtbase the test calls the raw __stdio_common_v*printf_p workers, which return -2 on truncation (raw baseline: r == -1 got=-2); the shims now apply the same `r < 0 ? -1 : r` normalisation as the SDK inline _swprintf_p/_vswprintf_p wrappers, so the documented -1 is what is checked. errno / handler / buf[0] state on truncation are in pfq_probe_neg_sprintf_p_small_buffer_state. %1$ls is used so the argument type does not depend on narrow/wide mode.
+ *        Raw evidence (baseline): count_4_small r == -1 got=-2 want=-1 ; v_wrapper_small got=-2.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -17,10 +18,12 @@
 #include <io.h>
 
 #if TC_CRT_VER >= 140
-static int tp_vsn(char *b, size_t n, const char *f, va_list ap) { return __stdio_common_vsprintf_p(0, b, n, f, NULL, ap); }
-static int tp_vf(FILE *s, const char *f, va_list ap) { return __stdio_common_vfprintf_p(0, s, f, NULL, ap); }
-static int tp_vswn_(wchar_t *b, size_t n, const wchar_t *f, va_list ap) { return __stdio_common_vswprintf_p(0, b, n, f, NULL, ap); }
-static int tp_vfw_(FILE *s, const wchar_t *f, va_list ap) { return __stdio_common_vfwprintf_p(0, s, f, NULL, ap); }
+/* the SDK inline wrappers (_vsprintf_p_l etc.) map any negative worker result to -1; the raw worker returns -2 on truncation (observed) */
+static int tc_neg1(int r) { return r < 0 ? -1 : r; }
+static int tp_vsn(char *b, size_t n, const char *f, va_list ap) { return tc_neg1(__stdio_common_vsprintf_p(0, b, n, f, NULL, ap)); }
+static int tp_vf(FILE *s, const char *f, va_list ap) { return tc_neg1(__stdio_common_vfprintf_p(0, s, f, NULL, ap)); }
+static int tp_vswn_(wchar_t *b, size_t n, const wchar_t *f, va_list ap) { return tc_neg1(__stdio_common_vswprintf_p(0, b, n, f, NULL, ap)); }
+static int tp_vfw_(FILE *s, const wchar_t *f, va_list ap) { return tc_neg1(__stdio_common_vfwprintf_p(0, s, f, NULL, ap)); }
 #else
 int __cdecl _vsprintf_p(char *, size_t, const char *, va_list);
 int __cdecl _vfprintf_p(FILE *, const char *, va_list);
@@ -82,10 +85,25 @@ TC_CASE(v_wrapper_small)
     CHECK_EQ_I(r, 6);
     CHECK_WSTR(b, L"abcdef");
 }
+#if TC_CRT_VER >= 140
+/* raw worker result (no normalisation): observed exactly -2 on Win10 22H2 ucrtbase for truncation */
+static int raw_swn(wchar_t *b, size_t n, const wchar_t *f, ...) { va_list ap; int r; va_start(ap, f); r = __stdio_common_vswprintf_p(0, b, n, f, NULL, ap); va_end(ap); return r; }
+TC_CASE(raw_worker_minus2)
+{
+    wchar_t b[16]; int r;
+    fillw(b, 16);
+    r = raw_swn(b, 4, F, S6);
+    CHECK_EQ_I(r, -2);
+    CHECK(guardw(b, 4, 16));
+}
+#define RAW_RUN TC_RUN(raw_worker_minus2);
+#else
+#define RAW_RUN
+#endif
 int main(void)
 {
     tc_begin();
     if (!tc_iph_install()) { tc_write("TC FAIL " TC_TEST_ID "::__no iph\n"); return 2; }
-    TC_RUN(count_4_small); TC_RUN(count_len_plus_one_ok); TC_RUN(v_wrapper_small);
+    TC_RUN(count_4_small); TC_RUN(count_len_plus_one_ok); TC_RUN(v_wrapper_small); RAW_RUN
     return tc_end();
 }

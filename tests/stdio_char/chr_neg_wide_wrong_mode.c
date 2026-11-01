@@ -5,9 +5,10 @@
  * crt:   all
  * tier:  p0
  * kind:  negative
- * conf:  inferred
+ * conf:  observed
  * ref:   MS docs fgetwc, fputwc, fgetws, fputws (return WEOF/NULL on error)
  * note:  Wide I/O in the wrong direction must fail (WEOF/NULL, documented) and set the error indicator (not explicitly documented, hence inferred).
+ *        OBSERVED (Win10 22H2, class A): fputws on a read-only stream returns EOF (-1) as an int; fputwc/fgetwc/fgetws asserts unchanged.
  */
 #include "tc.h"
 #define TCS2(x) #x
@@ -20,5 +21,5 @@ static void mk(const char *n) { FILE *f = fopen(n, "wb"); if (f) { fwrite("abc\n
 TC_CASE(fgetwc_on_w)  { FILE *f = fopen(FN, "w"); CHECK(f != NULL); if (!f) return; CHECK(fgetwc(f) == WEOF); CHECK(ferror(f) != 0); fclose(f); remove(FN); }
 TC_CASE(fgetws_on_w)  { wchar_t b[8]; FILE *f = fopen(FN, "w"); CHECK(f != NULL); if (!f) return; CHECK(fgetws(b, 8, f) == NULL); CHECK(ferror(f) != 0); fclose(f); remove(FN); }
 TC_CASE(fputwc_on_r)  { FILE *f; mk(FN); f = fopen(FN, "r"); CHECK(f != NULL); if (!f) return; CHECK(fputwc(L'x', f) == WEOF); CHECK(ferror(f) != 0); fclose(f); remove(FN); }
-TC_CASE(fputws_on_r)  { FILE *f; mk(FN); f = fopen(FN, "r"); CHECK(f != NULL); if (!f) return; CHECK(fputws(L"x", f) == WEOF); CHECK(ferror(f) != 0); fclose(f); remove(FN); }
+TC_CASE(fputws_on_r)  { FILE *f; mk(FN); f = fopen(FN, "r"); CHECK(f != NULL); if (!f) return; CHECK(fputws(L"x", f) == EOF);  /* int return: EOF (-1), not WEOF (0xFFFF) */ CHECK(ferror(f) != 0); fclose(f); remove(FN); }
 int main(void) { tc_begin(); tc_iph_install(); TC_RUN(fgetwc_on_w); TC_RUN(fgetws_on_w); TC_RUN(fputwc_on_r); TC_RUN(fputws_on_r); return tc_end(); }

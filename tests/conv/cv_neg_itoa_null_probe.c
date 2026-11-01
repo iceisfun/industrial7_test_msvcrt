@@ -5,11 +5,11 @@
  * crt:   ucrtbase
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _itoa_s: NULL buffer -> EINVAL and invalid parameter handler
- * note:  PROBING: that the non-_s routines given a NULL buffer invoke the invalid parameter handler once, set errno to EINVAL
- *        and return NULL (docs state this only for the _s variants). Each call runs in a child process (a crash must not mask other cases); child exits 10 iff errno==EINVAL and iph count==1
- *        (and, for _itoa only, return == NULL).
+ * note:  OBSERVED (Win10 22H2 19045 ucrtbase, run twice; class C): _itoa/_ltoa/_ultoa/_i64toa/_ui64toa given a NULL buffer do not validate it (the docs
+ *        state validation only for the _s variants): the child dies with STATUS_ACCESS_VIOLATION (0xC0000005) before any handler or errno effect.
+ *        The original probe expected handler once + EINVAL + NULL return. Each call runs in a child process and the exit code is asserted.
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -31,7 +31,8 @@ static int child_main(const char *n)
     else return 13;
     return (errno == EINVAL && tc_iph_count == 1 && ret_null) ? 10 : 11;
 }
-static void run(const char *n) { DWORD code = 0; int ok = tc_spawn_self(n, &code, 20000); CHECK(ok); CHECK_EQ_U(code, 10); }
+/* observed Win10 22H2 ucrtbase: the non-_s routines do not check the buffer; NULL is dereferenced -> access violation in the child */
+static void run(const char *n) { DWORD code = 0; int ok = tc_spawn_self(n, &code, 20000); CHECK(ok); CHECK_EQ_U(code, 0xC0000005u); }
 
 TC_CASE(itoa) { run("itoa"); }
 TC_CASE(ltoa) { run("ltoa"); }

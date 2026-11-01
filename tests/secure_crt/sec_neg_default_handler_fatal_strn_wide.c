@@ -22,6 +22,7 @@ static unsigned char *volatile v_nmd;
 static int child_main(const char *n)
 {
     char d[8] = "ab"; wchar_t w[8] = L"ab"; unsigned char m[8] = "ab";
+    tc_iph_default();
     if (tc_strequ(n, "strncpy_s")) strncpy_s(v_nd, v8, "abc", 3);
     else if (tc_strequ(n, "strncat_s")) strncat_s(d, v3, "abcdef", 6);
     else if (tc_strequ(n, "memmove_s")) memmove_s(d, v3, "0123456789", 8);

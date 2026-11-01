@@ -7,7 +7,8 @@
  * kind:  negative
  * conf:  probe
  * ref:   UCRT supports a ".UTF-8" locale (Windows 10 1803+); invalid multibyte input to %hc/%hs in wide printf -> EILSEQ, -1
- * note:  PROBE: in the UTF-8 locale a lone lead byte 0xC3 via %hc, and truncated "\xC3", invalid "\xFF", overlong "\xC0\x80" via %hs all fail. Skipped when setlocale(".UTF-8") fails. Overlong rejection is the least certain.
+ * note:  OBSERVED Win10 22H2 19045 ucrtbase (run twice): the lone lead byte 0xC3 via %hc returns 0 (nothing written) with errno EILSEQ, not -1 (hc_lone_lead). The others hold:
+ *        in the UTF-8 locale truncated "\xC3", invalid "\xFF", overlong "\xC0\x80" via %hs all fail. Skipped when setlocale(".UTF-8") fails. Overlong rejection is the least certain.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -29,7 +30,7 @@ TC_CASE(hc_lone_lead)
     wchar_t w[8]; int n; NEED_UTF8(); errno = 0;
     n = _snwprintf(w, 8, wf_hc, (char)c3);
     setlocale(LC_ALL, "C");
-    CHECK_EQ_I(n, -1); CHECK_EQ_I(errno, EILSEQ);
+    CHECK_EQ_I(n, 0); CHECK_EQ_I(errno, EILSEQ);
 }
 TC_CASE(hs_truncated)
 {

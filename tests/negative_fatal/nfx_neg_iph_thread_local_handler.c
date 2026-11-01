@@ -34,6 +34,7 @@ int main(void)
     if ((n = tc_child_name()) != NULL) {
         if (!tc_p_strcpy_s || !tc_p__set_thread_local_invalid_parameter_handler || !tc_p__set_invalid_parameter_handler) return 78;
         if (n[0] == 'o') {
+            tc_iph_default();
             HANDLE t = CreateThread(NULL, 0, thr, NULL, 0, NULL);
             if (!t) return 79;
             WaitForSingleObject(t, 10000); CloseHandle(t);

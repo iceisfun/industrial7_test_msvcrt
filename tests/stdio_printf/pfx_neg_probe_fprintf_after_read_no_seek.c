@@ -5,13 +5,12 @@
  * funcs: fprintf fgetc fopen fclose ferror
  * crt:   all
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.21.5.3p7 (output after input without intervening fflush/seek is undefined unless EOF was hit)
- * note:  PROBES the CRT behaviour (undefined by the standard) of a "w+" stream holding exactly one byte: fgetc consumes it (read buffer
- *        now exhausted, EOF not yet seen) then fprintf with no fseek/fflush. Expected: the buffer-full path (_flsbuf) sees _IOREAD without
- *        _IOEOF, returns EOF and sets _IOERR, so fprintf is negative and ferror != 0. (A 1-byte file is used on purpose: with unread bytes
- *        left in the read buffer the byte would just be stored in the buffer and fprintf would not fail.)
- *        The well-defined cases (with fseek, or after EOF) are in pfx_fprintf_read_then_write_seek.
+ * note:  OBSERVED on ucrtbase (Win10 22H2 x64 (19045) ucrtbase.dll observed, raw: "write_after_read_fails r < 0", "ferror(f) != 0"; zzp_probe4 "fprintf after read: r=1 ferror=0 file=[aX]"): on a "w+" stream
+ *        holding one byte, fgetc consumes it and fprintf with no fseek/fflush in between SUCCEEDS (r=1, no error flag) and the file ends up as "aX".
+ *        The EOF/_IOERR failure belief is kept for pre-UCRT CRTs (unverified). C11 7.21.5.3p7: output after input without an intervening
+ *        fflush/file-positioning call is undefined, so ucrt is conforming. Stable.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -39,9 +38,17 @@ TC_CASE(write_after_read_fails)
     rewind(f);
     CHECK_EQ_I(fgetc(f), 'a');
     r = fprintf(f, "X");
+#if TC_CRT_VER >= 140
+    CHECK_EQ_I(r, 1);            /* ucrtbase observed: the write is accepted */
+    CHECK_EQ_I(ferror(f), 0);
+    CHECK_EQ_I(fclose(f), 0);
+    { char b[8]; CHECK_EQ_I(rd(TMP, b, sizeof b), 2); CHECK_STR(b, "aX"); }
+    DeleteFileA(TMP);
+#else
     CHECK(r < 0);
     CHECK(ferror(f) != 0);
     fclose(f); DeleteFileA(TMP);
+#endif
 }
 int main(void)
 {

@@ -6,10 +6,13 @@
  * procs: _snwscanf_s _snscanf_s
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90 msvcr80
  * tier:  p0
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _snscanf_s, _snwscanf_s; scanf_s: buffer too small invokes the invalid parameter handler
  * note:  Return value, errno and buffer-emptying are NOT asserted (see scn_neg_secure_too_small_ret_errno_probe).
  *        The count argument limits characters read; the size argument is still checked against what is stored.
+ *        CORRECTED for Win10 22H2 ucrtbase (observed 2026-10-31): a too-small _s destination does NOT call the invalid parameter handler (tc_iph_count stays 0);
+ *        the sentinel/overflow checks below still hold. MS docs do not document a handler call for this case. Stable (2 runs).
+ *        Observed on Win10 22H2 ucrtbase only; the same expectation on the other CRTs (ucrtbase msvcr120 msvcr110 msvcr100 msvcr90 msvcr80) is [unverified] and must be confirmed when those CRTs are run in the VM.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -30,21 +33,21 @@ TC_CASE(wide_s_size3_input_abcdef)
 {
     wchar_t a[8]; int n; fillw(a); CHECK(tc_iph_install()); tc_iph_count = 0; errno = 0; vw = L"abcdef";
     n = _snwscanf_s(vw, 6, L"%s", a, (unsigned)3);
-    CHECK(tc_iph_count >= 1); (void)n;
+    CHECK_EQ_I(tc_iph_count, 0); (void)n;
     CHECK_EQ_U(a[3], L'Z'); CHECK_EQ_U(a[7], L'Z');
 }
 TC_CASE(wide_c_width4_size2)
 {
     wchar_t a[8]; int n; fillw(a); CHECK(tc_iph_install()); tc_iph_count = 0; errno = 0; vw = L"abcdef";
     n = _snwscanf_s(vw, 6, L"%4c", a, (unsigned)2);
-    CHECK(tc_iph_count >= 1); (void)n;
+    CHECK_EQ_I(tc_iph_count, 0); (void)n;
     CHECK_EQ_U(a[2], L'Z'); CHECK_EQ_U(a[7], L'Z');
 }
 TC_CASE(wide_set_too_small)
 {
     wchar_t a[8]; int n; fillw(a); CHECK(tc_iph_install()); tc_iph_count = 0; errno = 0; vw = L"abcdef";
     n = _snwscanf_s(vw, 6, L"%[a-z]", a, (unsigned)3);
-    CHECK(tc_iph_count >= 1); (void)n;
+    CHECK_EQ_I(tc_iph_count, 0); (void)n;
     CHECK_EQ_U(a[3], L'Z'); CHECK_EQ_U(a[7], L'Z');
 }
 TC_CASE(narrow_count_cut_still_fits_control)
@@ -58,7 +61,7 @@ TC_CASE(wide_s_iph_again)
 {
     wchar_t a[8]; fillw(a); CHECK(tc_iph_install()); tc_iph_count = 0; vw = L"abcdef";
     (void)_snwscanf_s(vw, 6, L"%s", a, (unsigned)3);
-    CHECK(tc_iph_count >= 1);
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 int main(void)
 {

@@ -10,6 +10,7 @@
  * note:  Termination (not returning) is documented; the exact status 0xC0000409 is observed Win10 behaviour, not documented.
  *        Each NULL argument is exercised in its own child process with no handler installed. Exact status is 0xC0000409
  *        (fast-fail) on UCRT; 77 means the call returned instead of terminating.
+ *        Win10 22H2 ucrtbase (observed 2026-10-31, stable over 2 runs): the mingw-w64 startup installs a silent invalid-parameter handler, so the child now calls tc_iph_default() first to reach the real UCRT default handler; it then dies with 0xC0000409 (fast-fail).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -32,7 +33,7 @@ TC_CASE(fscanf_null_fmt)    { expect_fatal("fscanf_fmt"); }
 
 static int child_main(const char *n)
 {
-    int x = 0; vs = NULL; vw = NULL; vf = NULL; vfmt = NULL; vwfmt = NULL;
+    int x = 0; tc_iph_default(); vs = NULL; vw = NULL; vf = NULL; vfmt = NULL; vwfmt = NULL;
     if (tc_strequ(n, "sscanf_str")) sscanf(vs, "%d", &x);
     else if (tc_strequ(n, "sscanf_fmt")) sscanf("1", vfmt, &x);
     else if (tc_strequ(n, "swscanf_str")) swscanf(vw, L"%d", &x);

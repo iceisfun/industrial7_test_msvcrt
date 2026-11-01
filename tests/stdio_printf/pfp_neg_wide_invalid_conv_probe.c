@@ -6,10 +6,10 @@
  * procs: _set_invalid_parameter_handler
  * crt:   >=140
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs "Parameter validation"
- * note:  PROBE: (a) swprintf with a format ending in a lone '%' returns <0 and calls the handler once;
- *        (b) errno is EINVAL after swprintf with unknown conversion '%y'.
+ * note:  Observed on Windows 10 22H2: the non-secure wide swprintf does not validate the format: L"abc%" returns 3 ("abc") and L"%y" returns 1
+ *        ("y"); no handler call, errno untouched (0).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -21,16 +21,16 @@ TC_CASE(trailing_pct)
     wchar_t w[16]; const wchar_t *volatile f = L"abc%"; int r;
     tc_iph_count = 0;
     r = swprintf(w, 16, f);
-    CHECK(r < 0);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 3);
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(unknown_conv_errno)
 {
     wchar_t w[16]; const wchar_t *volatile f = L"%y"; int r;
     tc_iph_count = 0; errno = 0;
     r = swprintf(w, 16, f);
-    CHECK(r < 0);
-    CHECK_EQ_I(errno, EINVAL);
+    CHECK_EQ_I(r, 1);
+    CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 int main(void)
 {

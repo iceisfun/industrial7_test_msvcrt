@@ -5,9 +5,13 @@
  * procs: _set_printf_count_output _get_printf_count_output
  * crt:   ucrtbase
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _set_printf_count_output; corecrt_stdio_config.h (_CRT_INTERNAL_PRINTF_* option bits)
- * note:  PROBING: interaction of the legacy _set_printf_count_output global with the UCRT secure %n handling, called through __stdio_common_vsprintf_s with options==0 (what the inline sprintf_s passes). Expectation (low confidence): after set(1) the %n conversion is honoured (return 3, n==3); after restoring 0 it is rejected again. The setting is restored to 0 in every case. The default-rejected case lives in pfu_neg_pct_n_sprintf_s.
+ * note:  OBSERVED (Win10 22H2 x64 (19045) ucrtbase.dll observed, raw: "enabled_sprintf_s r == 3 got=-1", "enabled_direct_options0 r == 3 got=-1"; zzp_probe4 "sprintf_s %n enabled: r=-1
+ *        errno=22 iph=1 n=-1", "vss opt0 %n enabled: r=-1 iph=1", "sprintf %n enabled: r=3 n=3", "vs opt0 %n enabled: r=3 n=3"): after
+ *        _set_printf_count_output(1) the NON-secure family (sprintf, __stdio_common_vsprintf options 0) honours %n (3, n==3, new case
+ *        enabled_nonsecure_sprintf), but the SECURE family (sprintf_s via __stdio_common_vsprintf_s, options 0) still rejects %n (-1, EINVAL, handler
+ *        once, n untouched). The original low-confidence guess for the secure path was wrong. setter_roundtrip and rejected_after_restore unchanged. Stable.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -40,9 +44,9 @@ TC_CASE(enabled_sprintf_s)
     tc_iph_count = 0;
     r = sprintf_s(b, 32, (const char *)f, &n);
     tc_p__set_printf_count_output(0);
-    CHECK_EQ_I(r, 3);
-    CHECK_EQ_I(n, 3);
-    CHECK_EQ_I(tc_iph_count, 0);
+    CHECK_EQ_I(r, -1);     /* observed: the secure variant rejects %n even when enabled */
+    CHECK_EQ_I(n, -1);
+    CHECK_EQ_I(tc_iph_count, 1);
 }
 TC_CASE(enabled_direct_options0)
 {
@@ -52,8 +56,21 @@ TC_CASE(enabled_direct_options0)
     tc_iph_count = 0;
     r = cv(b, 32, 0, (const char *)f, &n);
     tc_p__set_printf_count_output(0);
-    CHECK_EQ_I(r, 3);
+    CHECK_EQ_I(r, -1);     /* observed: __stdio_common_vsprintf_s rejects %n even when enabled */
+    CHECK_EQ_I(n, -1);
+    CHECK_EQ_I(tc_iph_count, 1);
+}
+TC_CASE(enabled_nonsecure_sprintf)
+{
+    char b[32]; int n = -1, r; volatile const char *f = "abc%n";
+    if (!tc_p__set_printf_count_output) return;
+    tc_p__set_printf_count_output(1);
+    tc_iph_count = 0;
+    r = sprintf(b, (const char *)f, &n);
+    tc_p__set_printf_count_output(0);
+    CHECK_EQ_I(r, 3);      /* observed: the non-secure sprintf honours %n once enabled */
     CHECK_EQ_I(n, 3);
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(rejected_after_restore)
 {
@@ -71,6 +88,6 @@ int main(void)
 {
     tc_begin(); tc_iph_install();
     TC_LOAD_PROC(_set_printf_count_output); TC_LOAD_PROC(_get_printf_count_output);
-    TC_RUN(setter_roundtrip); TC_RUN(enabled_sprintf_s); TC_RUN(enabled_direct_options0); TC_RUN(rejected_after_restore);
+    TC_RUN(setter_roundtrip); TC_RUN(enabled_sprintf_s); TC_RUN(enabled_direct_options0); TC_RUN(enabled_nonsecure_sprintf); TC_RUN(rejected_after_restore);
     return tc_end();
 }

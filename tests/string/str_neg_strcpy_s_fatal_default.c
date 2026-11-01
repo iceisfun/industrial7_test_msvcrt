@@ -30,6 +30,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();
         if (c[0] == 'i') tc_iph_install();
         pd = NULL; strcpy_s(pd, 1, "a");
         return 77;

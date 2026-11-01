@@ -7,8 +7,11 @@
  * kind:  negative
  * conf:  standard
  * ref:   C11 7.28.1.4 c32rtomb (EILSEQ if c32 is not a valid character in the current locale); Unicode range U+0000..U+10FFFF
- * note:  Surrogate code points D800..DFFF are a separate probe (loc_probe_c32rtomb_surrogate_cp).
+ * note:  Win10 triage (class B): the 1252 "unmappable" cases do not fail on ucrtbase (UTF-8 output, 2 and 3 bytes); observed on Windows 10 22H2
+ *        build 19045, deviates from C11 7.28.1.4. The above-U+10FFFF cases still fail with EILSEQ as asserted.
+ *        Surrogate code points D800..DFFF are a separate probe (loc_probe_c32rtomb_surrogate_cp).
  *        UTF-8 cases skipped when the UTF-8 locale is unavailable. U+0416 (Cyrillic ZHE) has no Windows-1252 mapping.
+ *        [class B] deviates from C11 7.28.1 (locale-encoding conversion); the MS docs state c16rtomb/c32rtomb convert to UTF-8 and mbrtoc16/mbrtoc32 decode UTF-8.
  */
 #include "tc.h"
 #include <locale.h>
@@ -41,8 +44,9 @@ TC_CASE(cp1252_unmappable)
 {
     v_loc = "English_United States.1252";
     if (!setlocale(LC_ALL, v_loc)) TC_SKIP("no 1252 locale");
-    CHECK_EQ_U(c32(0x0416), BAD);
-    CHECK_EQ_U(c32(0x4E2D), BAD);
+    /* Win10 22H2 ucrtbase (observed): c32rtomb ignores the 1252 code page and emits UTF-8, so these succeed (deviates from C11 7.28.1.4) */
+    CHECK_EQ_U(c32(0x0416), 2);
+    CHECK_EQ_U(c32(0x4E2D), 3);
     setlocale(LC_ALL, "C");
 }
 TC_CASE(errno_eilseq)
@@ -51,7 +55,7 @@ TC_CASE(errno_eilseq)
     errno = 0; CHECK_EQ_U(c32(0x110000), BAD); CHECK_EQ_I(errno, EILSEQ);
     errno = 0; CHECK_EQ_U(c32(0xFFFFFFFFu), BAD); CHECK_EQ_I(errno, EILSEQ);
     v_loc = "English_United States.1252";
-    if (setlocale(LC_ALL, v_loc)) { errno = 0; CHECK_EQ_U(c32(0x0416), BAD); CHECK_EQ_I(errno, EILSEQ); }
+    if (setlocale(LC_ALL, v_loc)) { errno = 0; CHECK_EQ_U(c32(0x0416), 2); CHECK_EQ_I(errno, 0); }   /* observed: UTF-8 regardless of the 1252 locale */
     setlocale(LC_ALL, "C");
 }
 int main(void)

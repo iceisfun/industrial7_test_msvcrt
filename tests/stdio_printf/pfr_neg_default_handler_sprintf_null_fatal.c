@@ -8,7 +8,9 @@
  * tier:  p1
  * conf:  documented
  * ref:   MS docs sprintf, _scprintf (NULL arguments invoke the invalid parameter handler); Parameter validation
- * note:  Child-process test; control child has a handler installed and expects -1 / 2 handler calls.
+ * note:  TC_UCRT is never defined by tools/tc.py, so the old #ifdef selected the GetProcAddress("sprintf") path, which is NULL on ucrtbase: every child died with 0xC0000005
+ *        calling a NULL pointer (the "fatal" cases passed by accident). Now selected with TC_CRT_VER >= 140. Children restore the CRT default handler (tc_iph_default).
+ *        Child-process test; control child has a handler installed and expects -1 / 2 handler calls.
  *        sprintf is exported by msvcr80..120 but is an inline wrapper in the ucrt headers, so on ucrtbase the test calls
  *        the __stdio_common_vsprintf export directly with the same arguments the inline wrapper would pass.
  */
@@ -20,7 +22,7 @@ typedef int (__cdecl *sprintf_t)(char *, const char *, ...);
 typedef int (__cdecl *scprintf_t)(const char *, ...);
 static sprintf_t p_sprintf;
 static scprintf_t p_scprintf;
-#ifdef TC_UCRT
+#if TC_CRT_VER >= 140
 /* sprintf/_scprintf are inline wrappers over __stdio_common_vsprintf in the UCRT headers (sprintf passes count
  * (size_t)-1; _scprintf passes options 2 = C99 snprintf behaviour, NULL buffer, count 0). Call the export directly so the
  * test provably runs ucrtbase code. */
@@ -47,7 +49,7 @@ int main(void)
     tc_begin();
     p_sprintf = (sprintf_t)tc_crt_proc("sprintf");
     p_scprintf = (scprintf_t)tc_crt_proc("_scprintf");
-#ifdef TC_UCRT
+#if TC_CRT_VER >= 140
     p_vsp = (vsp_t)tc_crt_proc("__stdio_common_vsprintf");
     if (!p_vsp) { tc_write("TC FAIL " TC_TEST_ID "::__proc __stdio_common_vsprintf missing\n"); return 1; }
 #endif
@@ -63,6 +65,7 @@ int main(void)
             r2 = SCPF(nf);
             return (r1 == -1 && r2 == -1 && tc_iph_count == 2) ? 77 : (100 + (r1 == -1) + 2 * (r2 == -1) + 4 * tc_iph_count);
         }
+        tc_iph_default();
         if (c[0] == 's' && c[1] == 'p') do_sprintf(nb, "x");
         else SCPF(nf);
         return 77;

@@ -7,7 +7,9 @@
  * tier:  p0
  * conf:  observed
  * ref:   UCRT inline wrappers _vsprintf_p / _vswprintf_p / _vfprintf_p (corecrt_stdio_config / stdio.h); MS docs _sprintf_p: NULL -> invalid parameter, returns -1
- * note:  Direct calls with options 0. Unknown options bits are in pfq_neg_stdio_common_vsprintf_p_optbits_probe.
+ * note:  Direct calls with options 0. Observed on Windows 10 22H2: NULL format/buffer/stream -> -1, EINVAL, handler called; a too-small buffer returns a
+ *        negative value (-2) without touching bytes beyond count. In the wide worker with options 0 (no legacy-wide-specifier bit) %s means a NARROW
+ *        string, so the wide case uses %ls. Unknown options bits are in pfq_neg_stdio_common_vsprintf_p_optbits_probe.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -59,7 +61,7 @@ TC_CASE(too_small)
     CHECK(r < 0);
     for (i = 4; i < 16; i++) if ((unsigned char)b[i] != G) ok = 0;
     CHECK(ok);
-    r = cw(w, n, L"%1$s", L"abcdefgh");
+    r = cw(w, n, L"%1$ls", L"abcdefgh");
     CHECK(r < 0);
     ok = 1;
     for (i = 4; i < 16; i++) if (w[i] != G) ok = 0;

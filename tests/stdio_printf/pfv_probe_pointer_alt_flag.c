@@ -5,9 +5,10 @@
  * crt:   win10
  * tier:  p2
  * kind:  positive
- * conf:  probe
+ * conf:  observed
  * ref:   none (undocumented)
- * note:  PROBES: %#p gives 0X-prefixed zero-padded text; %20p right-justifies; %-20p left-justifies.
+ * note:  OBSERVED: %#p gives the same zero-padded text as %p (the '#' flag adds no "0X" prefix); %20p right-justifies; %-20p left-justifies.
+ *        A (test bug): observed sprintf("%#p", 0x1234) == "0000000000001234" (no 0X) on Win10 22H2 19045 x64.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -23,7 +24,7 @@
 #define SP "            "
 #endif
 static char b[64];
-TC_CASE(hash_p) { void *volatile p = (void *)(size_t)0x1234; sprintf(b, "%#p", p); CHECK_STR(b, "0X" S8 "00001234"); }
+TC_CASE(hash_p) { void *volatile p = (void *)(size_t)0x1234; sprintf(b, "%#p", p); CHECK_STR(b, S8 "00001234"); }
 TC_CASE(width_20_p) { void *volatile p = (void *)(size_t)0x1234; sprintf(b, "[%20p]", p); CHECK_STR(b, "[" SP S8 "00001234]"); }
 TC_CASE(minus_p) { void *volatile p = (void *)(size_t)0x1234; sprintf(b, "[%-20p]", p); CHECK_STR(b, "[" S8 "00001234" SP "]"); }
 

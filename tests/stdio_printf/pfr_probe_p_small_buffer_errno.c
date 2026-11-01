@@ -9,10 +9,14 @@
  * ref:   MS docs _sprintf_p (by analogy with sprintf_s)
  * note:  PROBING, each in its own case, what _sprintf_p(b,3,"abcdef") does on a too-small buffer: (a) returns -1 and
  *        invokes the invalid-parameter handler, (b) sets errno ERANGE, (c) writes b[0]=0 (all as sprintf_s does).
+ *        OBSERVED on ucrtbase (Win10 22H2 19045 oracle93[34])?#934 integration full run crt-triage-triage-r1): the export __stdio_common_vsprintf_p(options 0, b, 3, "abcdef")
+ *        returns -2, does NOT call the handler, leaves errno 0 and keeps the truncated output (b[0]=='a'). Class A: the UCRT branch
+ *        asserts those values (the baseline build skipped every case: ucrtbase has no _sprintf_p export and TC_UCRT was undefined).
+ *        Older CRTs keep the original guesses. Cases renamed ret_and_handler/errno_value/buffer_state.
  */
 #include "tc.h"
 #include <errno.h>
-
+#include <string.h>
 #include <stdarg.h>
 
 typedef int (__cdecl *sprintf_p_t)(char *, size_t, const char *, ...);
@@ -45,28 +49,40 @@ TC_CASE(ret_and_handler)
     if (!p_sprintf_p) TC_SKIP("_sprintf_p not available");
     b[0] = 'Q'; tc_iph_count = 0;
     r = p_sprintf_p(b, 3, "abcdef");
+#ifdef TC_UCRT
+    CHECK_EQ_I(r, -2); CHECK_EQ_I(tc_iph_count, 0);   /* observed on Win10 22H2 */
+#else
     CHECK_EQ_I(r, -1); CHECK(tc_iph_count >= 1);
+#endif
 }
-TC_CASE(errno_erange)
+TC_CASE(errno_value)
 {
     char b[8]; int r;
     if (!p_sprintf_p) TC_SKIP("_sprintf_p not available");
     b[0] = 'Q'; errno = 0;
     r = p_sprintf_p(b, 3, "abcdef");
+#ifdef TC_UCRT
+    CHECK_EQ_I(r, -2); CHECK_EQ_I(errno, 0);   /* observed on Win10 22H2 */
+#else
     CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, ERANGE);
+#endif
 }
-TC_CASE(buffer_emptied)
+TC_CASE(buffer_state)
 {
     char b[8]; int r;
     if (!p_sprintf_p) TC_SKIP("_sprintf_p not available");
-    b[0] = 'Q';
+    memset(b, 'Q', sizeof b);
     r = p_sprintf_p(b, 3, "abcdef");
+#ifdef TC_UCRT
+    CHECK_EQ_I(r, -2); CHECK_EQ_I(b[0], 'a'); CHECK_EQ_I(b[1], 'b'); CHECK_EQ_I(b[2], 0); CHECK_EQ_I(b[3], 'Q');   /* observed on Win10 22H2 */
+#else
     CHECK_EQ_I(r, -1); CHECK_EQ_I(b[0], 0);
+#endif
 }
 int main(void)
 {
     tc_begin(); tc_iph_install();
     p_setup();
-    TC_RUN(ret_and_handler); TC_RUN(errno_erange); TC_RUN(buffer_emptied);
+    TC_RUN(ret_and_handler); TC_RUN(errno_value); TC_RUN(buffer_state);
     return tc_end();
 }

@@ -6,11 +6,14 @@
  * crt:   ucrtbase
  * tier:  p0
  * kind:  positive
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs iswalnum; C11 7.30.2.1
  * note:  PROBE: classification of wide chars above 0x7F through a "C" locale object in UCRT. Believed to follow Unicode tables
  *        for CJK (U+4E00 alnum/graph/print) and C1 controls (U+0085 cntrl); U+00E9 alnum, U+00A0 print and U+2028 cntrl
  *        are weaker guesses. Every char/function is its own case so one wrong guess does not mask others.
+ *        OBSERVED (Win10 22H2 19045 ucrtbase, run twice): the two weak guesses were wrong. _iswcntrl_l(0x2028, C-locale) == 0 and
+ *        _iswprint_l(0x00A0, C-locale) == 0; the other six cases (CJK alnum/graph/print, U+00E9 alnum, U+0085 cntrl and not print) held.
+ *        Cases renamed u2028_not_cntrl / nbsp_not_print. Table-driven: stable across runs; depends on the ucrtbase build's ctype tables.
  */
 #include "tc.h"
 
@@ -34,8 +37,8 @@ TC_CASE(cjk_print) { if (!f_print || !loc) TC_SKIP("missing"); CHECK_EQ_I(f_prin
 TC_CASE(eacute_alnum) { if (!f_alnum || !loc) TC_SKIP("missing"); CHECK_EQ_I(f_alnum(0x00E9, loc) != 0, 1); }
 TC_CASE(c1_0085_cntrl) { if (!f_cntrl || !loc) TC_SKIP("missing"); CHECK_EQ_I(f_cntrl(0x0085, loc) != 0, 1); }
 TC_CASE(c1_0085_print_false) { if (!f_print || !loc) TC_SKIP("missing"); CHECK_EQ_I(f_print(0x0085, loc) != 0, 0); }
-TC_CASE(u2028_cntrl) { if (!f_cntrl || !loc) TC_SKIP("missing"); CHECK_EQ_I(f_cntrl(0x2028, loc) != 0, 1); }
-TC_CASE(nbsp_print) { if (!f_print || !loc) TC_SKIP("missing"); CHECK_EQ_I(f_print(0x00A0, loc) != 0, 1); }
+TC_CASE(u2028_not_cntrl) { if (!f_cntrl || !loc) TC_SKIP("missing"); CHECK_EQ_I(f_cntrl(0x2028, loc) != 0, 0); }   /* observed: U+2028 is not iswcntrl */
+TC_CASE(nbsp_not_print) { if (!f_print || !loc) TC_SKIP("missing"); CHECK_EQ_I(f_print(0x00A0, loc) != 0, 0); }   /* observed: U+00A0 is not iswprint in the C locale object */
 
 int main(void)
 {
@@ -44,7 +47,7 @@ int main(void)
     loc = tc_p__create_locale(0, "C");
     CHECK(loc != NULL);
     TC_RUN(cjk_alnum); TC_RUN(cjk_graph); TC_RUN(cjk_print); TC_RUN(eacute_alnum);
-    TC_RUN(c1_0085_cntrl); TC_RUN(c1_0085_print_false); TC_RUN(u2028_cntrl); TC_RUN(nbsp_print);
+    TC_RUN(c1_0085_cntrl); TC_RUN(c1_0085_print_false); TC_RUN(u2028_not_cntrl); TC_RUN(nbsp_not_print);
     if (loc && tc_p__free_locale) tc_p__free_locale(loc);
     return tc_end();
 }

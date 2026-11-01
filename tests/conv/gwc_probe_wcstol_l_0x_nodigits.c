@@ -5,10 +5,10 @@
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90
  * tier:  p1
  * kind:  positive
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.22.1.4 (longest initial subsequence of expected form: "0")
- * note:  Probing "0x" with no hex digits: C says value 0 and endptr just after the '0'. Some old CRTs are believed to
- *        reset endptr to the start of the string when the prefix is consumed but no digit follows.
+ * note:  OBSERVED (Win10 22H2 19045 ucrtbase, run twice): _wcstol_l/_wcstoul_l of L"0xg" / L"0x" (base 16, base 0) return 0 with endptr == nptr.
+ *        deviates from C11 7.29.4.1.2p4 (the "0" before a prefix-only "0x" is not converted; endptr == nptr).
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -17,14 +17,19 @@
 #include <limits.h>
 #include <wchar.h>
 
+#if TC_AT_LEAST(140)
+#define EXP_END(p) (p)       /* observed Win10 22H2 ucrtbase: nothing consumed */
+#else
+#define EXP_END(p) ((p) + 1) /* ISO C; unverified on pre-UCRT CRTs */
+#endif
 static _locale_t L;
 static const wchar_t *volatile vp;
 static long  S(const wchar_t *s, wchar_t **e, int b) { vp = s; return _wcstol_l(vp, e, b, L); }
 static unsigned long U(const wchar_t *s, wchar_t **e, int b) { vp = s; return _wcstoul_l(vp, e, b, L); }
 
-TC_CASE(base16) { const wchar_t *s = L"0xg"; wchar_t *e; CHECK_EQ_I(S(s, &e, 16), 0); CHECK_EQ_P(e, s + 1); }
-TC_CASE(base0) { const wchar_t *s = L"0xg"; wchar_t *e; CHECK_EQ_I(S(s, &e, 0), 0); CHECK_EQ_P(e, s + 1); }
-TC_CASE(unsigned_base16) { const wchar_t *s = L"0x"; wchar_t *e; CHECK_EQ_U(U(s, &e, 16), 0); CHECK_EQ_P(e, s + 1); }
+TC_CASE(base16) { const wchar_t *s = L"0xg"; wchar_t *e; CHECK_EQ_I(S(s, &e, 16), 0); CHECK_EQ_P(e, EXP_END(s)); }
+TC_CASE(base0) { const wchar_t *s = L"0xg"; wchar_t *e; CHECK_EQ_I(S(s, &e, 0), 0); CHECK_EQ_P(e, EXP_END(s)); }
+TC_CASE(unsigned_base16) { const wchar_t *s = L"0x"; wchar_t *e; CHECK_EQ_U(U(s, &e, 16), 0); CHECK_EQ_P(e, EXP_END(s)); }
 int main(void)
 {
     tc_begin();

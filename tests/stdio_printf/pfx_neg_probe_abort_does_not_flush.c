@@ -8,8 +8,10 @@
  * tier:  p1
  * conf:  probe
  * ref:   MS docs abort ("exit code 3", does not flush stream buffers / no atexit processing)
- * note:  Probes that abort() (with message box and Watson suppressed) ends the child with code 3 and that the buffered
- *        4 bytes never reach the file. Docs say abort does not flush buffers; the exact exit code 3 is the probed part.
+ * note:  abort() (message box and Watson suppressed) ends the child with exit code 3. OBSERVED Win10 22H2 19045 ucrtbase (run twice): the 4 buffered bytes ARE in the file
+ *        after abort() (size 4) although the file was still empty just before the call (the child checks that: size 0 before abort, else exit 72, also with a full-buffered stream
+ *        in a scratch probe). So this UCRT flushes open streams on abort; the old expectation "never reach the file" (from the docs wording) was wrong here.
+ *        Deviates from the MS docs wording; C11 7.22.4.1 leaves it implementation-defined whether open output streams are flushed. class B.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -34,9 +36,9 @@ TC_CASE(abort_code)
     CHECK(ran);
     CHECK_EQ_U(code, 3);
 }
-TC_CASE(data_discarded)
+TC_CASE(data_flushed_by_abort)
 {
-    CHECK_EQ_I(fsize(FN), 0);
+    CHECK_EQ_I(fsize(FN), 4);
     DeleteFileA(FN);
 }
 
@@ -50,9 +52,10 @@ int main(void)
         f = fopen(FN, "w");
         if (!f) return 70;
         if (fprintf(f, "data") != 4) return 71;
+        { WIN32_FILE_ATTRIBUTE_DATA d; if (!GetFileAttributesExA(FN, GetFileExInfoStandard, &d) || d.nFileSizeLow != 0) return 72; } /* still buffered before abort */
         abort();
         return 77;
     }
-    TC_RUN(abort_code); TC_RUN(data_discarded);
+    TC_RUN(abort_code); TC_RUN(data_flushed_by_abort);
     return tc_end();
 }

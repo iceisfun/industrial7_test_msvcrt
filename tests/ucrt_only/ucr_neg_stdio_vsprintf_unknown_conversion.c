@@ -6,11 +6,13 @@
  * crt:   win10
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf format specification / Parameter validation (invalid format: handler, EINVAL, -1)
  * note:  PROBES: an unknown conversion character (%y) in the non-_s narrow/wide functions (options 0) is an invalid
  *        parameter: -1, EINVAL, handler once. The docs describe this for invalid format strings generally; the exact
  *        treatment of an unknown type character is not confirmed. The final valid-format case is a sanity control.
+ * note:  OBSERVED (Win10 22H2 19045; raw "r == -1 got=3", errno 0, handler 0; buffer "ayb" read from the explore probe): an unknown conversion character
+ *        in the non-_s functions is treated as a literal; C11 7.21.6.1p9 leaves it undefined. Class A.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -32,7 +34,8 @@ TC_CASE(narrow_y)
     if (!p_vs) TC_SKIP("not exported");
     errno = 0; tc_iph_count = 0;
     r = calls(b, "a%yb", 1);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    /* observed Win10 22H2: the unknown conversion is not an error; the "%" is dropped and "y" is emitted literally */
+    CHECK_EQ_I(r, 3); CHECK_STR(b, "ayb"); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(wide_y)
 {
@@ -40,7 +43,7 @@ TC_CASE(wide_y)
     if (!p_vws) TC_SKIP("not exported");
     errno = 0; tc_iph_count = 0;
     r = callw(b, L"a%yb", 1);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 3); CHECK_WSTR(b, L"ayb"); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(valid_still_ok)
 {

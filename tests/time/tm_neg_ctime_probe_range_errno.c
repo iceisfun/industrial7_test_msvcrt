@@ -8,7 +8,7 @@
  * tier:  p2
  * conf:  probe
  * ref:   MS docs ctime, ctime_s (range failure)
- * note:  PROBE: (1) errno == EINVAL after _ctime64/_ctime32 return NULL for an out-of-range time (not documented on the ctime page);
+ * note:  Observed on Windows 10 22H2 build 19045 ucrtbase (triage-win10 wp2-time-0). errno == EINVAL after _ctime64/_ctime32 return NULL for an out-of-range time (not documented on the ctime page); _ctime64 limit on this build is 32536799999 so 32536800000 is the first rejected value.
  *        (2) _ctime64_s with a valid 26-byte buffer and out-of-range time leaves buffer[0] == 0 (empty string).
  */
 #include "tc.h"
@@ -33,7 +33,11 @@ TC_CASE(ctime64_big_errno)
     __time64_t t; char *r;
     if (!tc_iph_install()) TC_SKIP("no iph");
     _putenv("TZ=UTC0"); _tzset(); errno = 0;
+#if TC_CRT_VER >= 140   /* ucrtbase: observed on Win10 22H2; older CRTs keep the original expectation (not run on Windows) */
+    vt = 32536800000LL; t = vt; r = _ctime64(&t);
+#else
     vt = 32535244800LL; t = vt; r = _ctime64(&t);
+#endif
     CHECK(r == NULL); CHECK_EQ_I(errno, EINVAL);
 }
 TC_CASE(ctime32_neg_errno)

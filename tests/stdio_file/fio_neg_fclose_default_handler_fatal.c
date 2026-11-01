@@ -25,6 +25,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
+    if (tc_child_name()) tc_iph_default();
     if ((c = tc_child_name()) != NULL) {
         FILE *volatile n = NULL;
         if (c[0] == 'b') { _set_invalid_parameter_handler(NULL); }

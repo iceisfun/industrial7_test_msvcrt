@@ -8,6 +8,8 @@
  * conf:  documented
  * ref:   MS docs "Parameter validation"; docs for fread/ftell/rewind/fgetpos/feof/ferror/clearerr (invalid-parameter handler is invoked for NULL stream)
  * note:  Without a handler installed, an invalid parameter terminates the process. Each call runs in a child.
+ *        HARNESS FIX (class F, Win10 22H2): mingw crt2.o installs a no-op invalid-parameter handler at startup, so the child survived (exit 77 instead of
+ *        0xC0000409); the child now calls tc_iph_default() (tc.h) to restore the CRT default before the call under test.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -16,6 +18,7 @@
 static int child_main(const char *c)
 {
     FILE *volatile nf = NULL; char buf[4]; fpos_t pos; volatile int r = 0; volatile long l = 0;
+    tc_iph_default();  /* undo mingw startup no-op handler */
     if (!strcmp(c, "fread")) r = (int)fread(buf, 1, 1, nf);
     else if (!strcmp(c, "ftell")) l = ftell(nf);
     else if (!strcmp(c, "rewind")) rewind(nf);

@@ -9,6 +9,7 @@
  * ref:   MS docs _get_tzname (index must be 0 or 1), _ftime_s (NULL timeptr), _strdate_s (buffer >= 9)
  * note:  Each misuse runs in a child process; default handler terminates it
  *        (exit != 0, != 77; exact NTSTATUS not asserted).
+ *        Children call tc_iph_default(): the mingw startup code installs a no-op invalid-parameter handler, which hid the CRT default.
  */
 #include "tc.h"
 #include <time.h>
@@ -30,6 +31,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();  /* mingw startup installs a no-op handler; restore the CRT default (fast-fail) */
         char buf[32]; size_t n = 0; volatile int idx = 5; volatile size_t sz = 3;
         if (c[0] == 't') _get_tzname(&n, buf, 10, idx);
         else if (c[0] == 'f') _ftime64_s(NULL);

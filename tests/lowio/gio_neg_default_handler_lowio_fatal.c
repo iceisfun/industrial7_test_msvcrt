@@ -34,6 +34,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();
         volatile int bad = -1;
         if (tc_strequ(c, "tell")) _tell(bad);
         else if (tc_strequ(c, "filelength")) _filelength(bad);

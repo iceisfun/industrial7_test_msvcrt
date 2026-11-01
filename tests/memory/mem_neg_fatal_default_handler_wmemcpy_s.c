@@ -21,6 +21,7 @@ static volatile wchar_t ws[4] = { 1, 2, 3, 0 }, wd[4];
 static int child_main(const char *n)
 {
     wcp_t cpy = (wcp_t)tc_crt_proc("wmemcpy_s"), mov = (wcp_t)tc_crt_proc("wmemmove_s");
+    tc_iph_default();
     if (!cpy || !mov) return 78;
     if (tc_strequ(n, "cpy_null_dest")) cpy(NULL, 4, (const wchar_t *)ws, 2);
     else if (tc_strequ(n, "mov_range")) mov((wchar_t *)wd, 2, (const wchar_t *)ws, 4);

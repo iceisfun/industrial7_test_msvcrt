@@ -5,22 +5,23 @@
  * crt:   >=80
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _popen (only r/w with t/b described)
- * note:  PROBE: whether _popen validates the mode string and rejects "rw" (an implementation might stop parsing after the first r/w and ignore trailing chars) with NULL/EINVAL. Not documented explicitly.
+ * note:  Observed on Win10 22H2 19045 ucrtbase: _popen with mode "rw" calls the invalid-parameter handler once but still
+ *        returns a usable stream (not NULL, not rejected as the old guess had it). The stream is closed with _pclose.
  */
 #include "tc.h"
 #include <stdio.h>
 #include <errno.h>
 static const char *volatile vmode;
-static void bad(const char *m)
+TC_CASE(mode_rw)
 {
     FILE *f;
-    errno = 0; vmode = m;
+    tc_iph_install(); tc_iph_count = 0; errno = 0; vmode = "rw";
     f = _popen("cmd /c exit 0", vmode);
-    CHECK(f == NULL);
+    CHECK(f != NULL);              /* observed: "rw" is NOT rejected (the first letter decides, trailing chars are ignored) */
+    CHECK_EQ_I(tc_iph_count, 1);   /* observed: the handler IS called once, yet a stream is still returned */
     CHECK_EQ_I(errno, EINVAL);
-    if (f) _pclose(f);
+    if (f) CHECK_EQ_I(_pclose(f), 0);
 }
-TC_CASE(mode_rw) { tc_iph_install(); bad("rw"); }
 int main(void) { tc_begin(); TC_RUN(mode_rw); return tc_end(); }

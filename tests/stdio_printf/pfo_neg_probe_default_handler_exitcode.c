@@ -10,6 +10,7 @@
  * ref:   MS docs _invalid_parameter; UCRT invalid_parameter_noinfo_noreturn -> __fastfail(FAST_FAIL_INVALID_ARG)
  * note:  PROBE: the exit code of a child that hits the default invalid-parameter handler via __stdio_common_vsprintf_s(NULL buffer)
  *        is exactly STATUS_STACK_BUFFER_OVERRUN (0xC0000409). Other plausible values on real Windows: 0xC000041D, 3 (abort).
+ *        Win10 22H2 fix: child calls tc_iph_default() first (mingw crtexe installs a no-op handler).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -35,7 +36,7 @@ int main(void)
     tc_begin();
     p_vsprintf_s = (vsprintf_s_t)tc_crt_proc("__stdio_common_vsprintf_s");
     if (!p_vsprintf_s) { tc_write("TC FAIL " TC_TEST_ID "::__proc missing\n"); return 1; }
-    if (tc_child_name()) { char *volatile nb = NULL; vss(nb, 16, "abc"); return 77; }
+    if (tc_child_name()) { char *volatile nb = NULL; tc_iph_default(); vss(nb, 16, "abc"); return 77; }
     TC_RUN(exit_code);
     return tc_end();
 }

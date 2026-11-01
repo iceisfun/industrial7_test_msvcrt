@@ -32,7 +32,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
-        const char *volatile p = NULL; const wchar_t *volatile w = NULL;
+        const char *volatile p = NULL; const wchar_t *volatile w = NULL; tc_iph_default();
         if (!strcmp(c, "open")) _open((const char *)p, _O_RDONLY);
         else _wopen((const wchar_t *)w, _O_RDONLY);
         return 77;

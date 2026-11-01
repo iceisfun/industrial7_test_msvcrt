@@ -9,6 +9,9 @@
  * conf:  documented
  * ref:   MS docs terminate, set_terminate
  * note:  terminate() calls the most recently installed handler; the handler here never returns (ExitProcess).
+ *        Win10 22H2 19045 (observed): ucrtbase exports the plain names set_terminate, terminate, _get_terminate, unexpected, set_unexpected (and not
+ *        the decorated C++ names). The harness macro TC_UCRT is never defined by tools/tc.py, so the plain-name branch was dead; the test now selects it with
+ *        TC_AT_LEAST(140) (class F).
  */
 #include "tc.h"
 
@@ -18,7 +21,7 @@ typedef th_t (__cdecl *setth_t)(th_t);
 #define N_TERM "terminate"
 #define N_SETD "?set_terminate@@YAP6AXXZP6AXXZ@Z"
 #define N_TERMD "?terminate@@YAXXZ"
-#ifdef TC_UCRT
+#if TC_AT_LEAST(140)   /* ucrtbase; NB tools/tc.py never defines TC_UCRT */
 #define PICK(a, b) tc_crt_proc(a) ? tc_crt_proc(a) : tc_crt_proc(b)
 #else
 #define PICK(a, b) tc_crt_proc(b)

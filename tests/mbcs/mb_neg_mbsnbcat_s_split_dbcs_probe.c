@@ -6,10 +6,12 @@
  * crt:   ucrtbase msvcr120
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _mbsnbcat_s
  * note:  PROBE: in CP932, a byte count that would split a DBCS character does not append the orphan lead byte (result terminated);
  *        with _TRUNCATE and a dst too small for the 2nd DBCS char, only whole chars are kept and STRUNCATE is returned.
+ *        Observed Win10 22H2 ucrtbase: a count of 3 over two DBCS chars appends the first whole char (dst = 'a' 82 A0 NUL) but returns
+ *        EILSEQ (42), not 0, and does not call the invalid-parameter handler. Stable.
  */
 #include "tc.h"
 #include <mbstring.h>
@@ -27,7 +29,7 @@ TC_CASE(split_count_result_probe)
 {
     unsigned char d[16] = {'a',0}, e[4] = {'a',0x82,0xA0,0};
     CHECK(p_nbcat); if (!p_nbcat) return;
-    CHECK_EQ_I(p_nbcat(d, 16, src, 3), 0);
+    CHECK_EQ_I(p_nbcat(d, 16, src, 3), 42);   /* observed EILSEQ; the whole first char was still appended */
     CHECK_MEM(d, e, 4);
 }
 TC_CASE(truncate_split_probe)

@@ -22,6 +22,7 @@ int main(void)
 {
     tc_begin();
     if (tc_child_name() != NULL) {
+        tc_iph_default();
         _beginthreadex(NULL, 0, NULL, NULL, 0, NULL);
         return 77;
     }

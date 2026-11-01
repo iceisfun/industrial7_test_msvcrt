@@ -7,8 +7,9 @@
  * tier:  p1
  * conf:  probe
  * ref:   MS docs _swprintf_p (secure-family conventions; too-small behaviour not stated)
- * note:  PROBES: _p worker, options 0, buffer of 4 wchar_t and output "abcdef": returns a negative value, buffer[0] == 0,
- *        errno == ERANGE, the invalid parameter handler runs, and nothing at index >= 4 is written. Control: output that fits.
+ * note:  OBSERVED Win10 22H2 19045 ucrtbase (run twice): _p worker, options 0, buffer of 4 wchar_t and output "abcdef": returns -2 (the raw worker code for "buffer too small"; the
+ *        inline _vsnprintf-style wrappers map it to -1), the buffer holds the truncated "abc" + NUL, errno unchanged, NO invalid-parameter call, nothing at index >= 4 written.
+ *        The old guess (buffer[0]==0, ERANGE, handler) was wrong. Control: output that fits.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -30,7 +31,7 @@ TC_CASE(too_small)
     for (i = 0; i < 8; i++) b[i] = L'Z';
     tc_iph_count = 0; errno = 0;
     r = cw(b, n, L"%1$ls%2$ls", L"abc", L"def");
-    CHECK(r < 0); CHECK_EQ_I(b[0], 0); CHECK_EQ_I(errno, ERANGE); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, -2); CHECK_WSTR(b, L"abc"); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
     for (i = 4; i < 8; i++) CHECK_EQ_I(b[i], L'Z');
 }
 int main(void)

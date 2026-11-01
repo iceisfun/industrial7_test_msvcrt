@@ -24,7 +24,7 @@ TC_CASE(child_terminates)
 int main(void)
 {
     tc_begin();
-    if (tc_child_name()) { volatile int fd = -1; _close(fd); return 77; }
+    if (tc_child_name()) { tc_iph_default(); volatile int fd = -1; _close(fd); return 77; }
     TC_RUN(child_terminates);
     return tc_end();
 }

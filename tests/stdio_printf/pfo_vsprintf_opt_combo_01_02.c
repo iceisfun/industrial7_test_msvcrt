@@ -7,7 +7,8 @@
  * kind:  positive
  * conf:  probe
  * ref:   stdio.h inline _vsnprintf/snprintf option masks; C11 7.21.6.5
- * note:  PROBE: the combination 0x1|0x2 is never used by the shipped headers (snprintf=2, _snprintf=1), so its behaviour is undocumented. Expected: standard snprintf semantic (return would-be length, always NUL-terminated).
+ * note:  the combination 0x1|0x2 is never used by the shipped headers (snprintf=2, _snprintf=1), so its behaviour is undocumented. OBSERVED Win10 22H2 19045 ucrtbase (run twice): on truncation
+ *        0x1 wins: returns -1 and fills all 4 bytes WITHOUT a terminator (b="abcd"), unlike option 2 alone (would-be length, terminated). The size query and fits cases return the C99 length.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -23,7 +24,7 @@ TC_CASE(trunc)
     char b[16]; int n;
     memset(b, 'Z', sizeof b);
     n = vs(3, b, 4, "abcdefgh");
-    CHECK_EQ_I(n, 8); CHECK_EQ_I(b[2], 'c'); CHECK_EQ_I(b[3], 0); CHECK_EQ_I(b[4], 'Z');
+    CHECK_EQ_I(n, -1); CHECK_EQ_I(b[2], 'c'); CHECK_EQ_I(b[3], 'd'); CHECK_EQ_I(b[4], 'Z');
 }
 TC_CASE(size_query)
 {

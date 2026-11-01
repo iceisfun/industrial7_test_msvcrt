@@ -21,7 +21,7 @@ TC_DECL_PROC(int, asctime_s, (char *, size_t, const struct tm *));
 static struct tm t;
 static void bad(void) { char b[26]; int r; tc_iph_count = 0; r = tc_p_asctime_s(b, 26, &t); CHECK_EQ_I(r, EINVAL); CHECK_EQ_I(tc_iph_count, 1); }
 #define GOOD mk(&t, 117, 9, 23, 14, 5, 9, 1)
-TC_CASE(year) { GOOD; t.tm_year = -1; bad(); GOOD }
+TC_CASE(year) { GOOD; t.tm_year = -1; bad(); GOOD; }
 TC_CASE(mon) { GOOD; t.tm_mon = 12; bad(); }
 TC_CASE(mday) { GOOD; t.tm_mday = 0; bad(); }
 TC_CASE(hour) { GOOD; t.tm_hour = 24; bad(); }

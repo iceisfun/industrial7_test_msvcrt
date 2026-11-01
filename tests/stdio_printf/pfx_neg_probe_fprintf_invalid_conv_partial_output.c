@@ -3,13 +3,12 @@
  * area:  stdio_printf
  * kind:  negative
  * funcs: fprintf fopen fclose
- * crt:   >=100
+ * crt:   ucrtbase
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf format specification; "Parameter validation"
- * note:  PROBES which bytes reach the file when fprintf("abc%yxyz") fails on the invalid conversion '%y': the literal text before it
- *        ("abc") is expected to have been emitted (exactly "abc", length 3) because output is produced incrementally, and nothing after.
- *        Also probes that the stream remains usable without clearerr, and that a failure at the very start leaves 0 bytes.
+ * note:  Observed on Windows 10 22H2 ucrtbase: fprintf does not reject the unknown conversion '%y'; the '%' is dropped and the rest is copied, so
+ *        fprintf("abc%yxyz") returns 7 and the file holds "abcyxyz"; errno stays 0, no handler call; the stream stays usable; "%yxyz" returns 4 ("yxyz").
  */
 #include "tc.h"
 #include <stdio.h>
@@ -37,7 +36,7 @@ TC_CASE(partial_prefix)
 {
     FILE *f = fopen(TMP, "w"); int r; char b[32]; CHECK(f != NULL); if (!f) return;
     tc_iph_count = 0; errno = 0; r = fprintf(f, g_fmt, 1);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 7); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
     (void)b; fclose(f);
     DeleteFileA(TMP);
 }
@@ -46,25 +45,25 @@ TC_CASE(partial_prefix_content)   /* isolated guess: the bytes that reach the fi
     FILE *f = fopen(TMP, "w"); char b[32]; CHECK(f != NULL); if (!f) return;
     (void)fprintf(f, g_fmt, 1);
     (void)fclose(f);
-    CHECK_EQ_I(rd(TMP, b, sizeof b), 3); CHECK_STR(b, "abc");
+    CHECK_EQ_I(rd(TMP, b, sizeof b), 7); CHECK_STR(b, "abcyxyz");
     DeleteFileA(TMP);
 }
 TC_CASE(stream_usable_appends)
 {
     FILE *f = fopen(TMP, "w"); int r; char b[32]; CHECK(f != NULL); if (!f) return;
-    r = fprintf(f, g_fmt, 1); CHECK_EQ_I(r, -1);
+    r = fprintf(f, g_fmt, 1); CHECK_EQ_I(r, 7);
     r = fprintf(f, "Z"); CHECK_EQ_I(r, 1);
     CHECK_EQ_I(fclose(f), 0);
-    CHECK_EQ_I(rd(TMP, b, sizeof b), 4); CHECK_STR(b, "abcZ");
+    CHECK_EQ_I(rd(TMP, b, sizeof b), 8); CHECK_STR(b, "abcyxyzZ");
     DeleteFileA(TMP);
 }
 TC_CASE(failure_at_start_zero_bytes)
 {
     FILE *f = fopen(TMP, "w"); int r; char b[32]; CHECK(f != NULL); if (!f) return;
     tc_iph_count = 0; errno = 0; r = fprintf(f, g_y, 1);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL);
+    CHECK_EQ_I(r, 4); CHECK_EQ_I(errno, 0);
     (void)fclose(f);
-    CHECK_EQ_I(rd(TMP, b, sizeof b), 0);
+    CHECK_EQ_I(rd(TMP, b, sizeof b), 4); CHECK_STR(b, "yxyz");
     DeleteFileA(TMP);
 }
 int main(void)

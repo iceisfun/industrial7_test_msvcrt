@@ -5,9 +5,10 @@
  * crt:   >=140
  * tier:  p0
  * kind:  negative
- * conf:  inferred
+ * conf:  observed
  * ref:   UCRT __stdio_common_vswprintf_p (inline wrappers _swprintf_p/_vswprintf_p); MS docs: NULL buffer/format are invalid parameters returning -1
  * note:  Direct call with options 0. Position-gap handling is in pfq_neg_probe_stdio_common_vswprintf_p_gap; unknown option bits in pfq_neg_stdio_common_vsprintf_p_optbits_probe.
+ *        A (test bug): small_buf: __stdio_common_vswprintf_p returns -2 (not -1) when the buffer is too small (observed, Win10 22H2 19045). null_buf/null_fmt cases keep conf inferred semantics.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -72,7 +73,7 @@ TC_CASE(small_buf)
     wchar_t b[16]; int r;
     fillw(b, 16);
     r = cw(0, b, 3, L"%1$ls", L"abcdef");
-    CHECK_EQ_I(r, -1);
+    CHECK_EQ_I(r, -2);
     CHECK(guardw(b, 3, 16));
 }
 int main(void)

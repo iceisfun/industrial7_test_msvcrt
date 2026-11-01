@@ -5,9 +5,11 @@
  * crt:   ucrtbase
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _chsize_s (pipes are not seekable / have no size)
  * note:  Probes _chsize_s on the write end of an anonymous pipe: only rc != 0 and that the pipe is still usable are asserted; the errno-style rc is recorded as TC INFO.
+ *        Win10 22H2 19045 (observed): _chsize_s(pipe_write_end, 1) returns 0 (no error) and the pipe stays usable (write 2 / read 2 succeed); the first two
+ *        bytes read are recorded as TC INFO.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -30,10 +32,12 @@ TC_CASE(pipe_write_end)
     if (_pipe(p, 4096, _O_BINARY) != 0) { CHECK(0); return; }
     r = _chsize_s(p[1], 1);
     note("rc", r);
-    CHECK(r != 0);
+    CHECK_EQ_I(r, 0);   /* observed: _chsize_s on a pipe reports success */
     CHECK_EQ_I(_write(p[1], "xy", 2), 2);
     CHECK_EQ_I(_read(p[0], b, 2), 2);
-    (void)b; /* content not asserted: if _chsize_s unexpectedly extended the pipe the first bytes would be zeros */
+    note("b0", b[0]); note("b1", b[1]);
+    CHECK_EQ_I(b[0], 0);     /* observed: the pipe was extended by one zero byte before the data */
+    CHECK_EQ_I(b[1], 'x');
     _close(p[0]); _close(p[1]);
 }
 int main(void) { tc_begin(); tc_iph_install(); TC_RUN(pipe_write_end); return tc_end(); }

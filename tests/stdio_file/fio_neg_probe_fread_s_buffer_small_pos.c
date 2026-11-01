@@ -6,9 +6,10 @@
  * procs: fread_s fopen fclose
  * crt:   >=80
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs fread_s: bufferSize too small -> ERANGE
  * note:  PROBE: file position after a rejected fread_s (bufferSize too small). Believed unchanged (check precedes reading); not documented.
+ *        OBSERVED (Win10 22H2, class A): fread_s(buf,4,1,8,f) on "abcdefghijkl" returns 0, errno ERANGE (34), handler called once, and the position advanced to 1.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -39,7 +40,11 @@ TC_CASE(too_small)
     if (!tc_p_fread_s) TC_SKIP("fread_s not exported");
     mkfile(fn, "abcdefghijkl", 12); f = fopen(fn, "rb"); CHECK(f != NULL); if (!f) return;
     errno = 0; r = tc_p_fread_s(buf, v4, v1, v8, f);
-    CHECK_EQ_U(r, 0); (void)n0;
-    CHECK_EQ_I(ftell(f), 0); fclose(f);
+    CHECK_EQ_U(r, 0);
+    CHECK_EQ_I(errno, ERANGE);
+    CHECK(tc_iph_count - n0 >= 1);
+    CHECK_EQ_I(ftell(f), 1);    /* observed: one byte was consumed before the size check failed (raw: ftell(f) == 0 got=1) */
+    CHECK_EQ_I(fgetc(f), 'b');
+    fclose(f);
 }
 int main(void) { tc_begin(); CHECK(tc_iph_install()); TC_LOAD_PROC(fread_s); TC_RUN(too_small); remove(fn); return tc_end(); }

@@ -2,14 +2,15 @@
  * id:    tm_neg_timespec_get_probe_base_c23
  * area:  time
  * funcs:
- * procs: timespec_get _timespec64_get
+ * procs: _timespec64_get
  * crt:   ucrtbase
  * tier:  p2
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   C23 7.29.2.7 (optional bases TIME_MONOTONIC/TIME_ACTIVE/TIME_THREAD_ACTIVE)
  * note:  PROBES whether ucrtbase rejects (returns 0) the C23 optional time bases 2, 3, 4.
  *        Newer UCRTs may support some; a return of 1 would mean support, not a bug.
+ *        ucrtbase does not export "timespec_get" (the header inlines it over _timespec64_get); Win10 19045: _timespec64_get returns 0 for bases 2,3,4 and 5 (no handler) and 1 for TIME_UTC.
  */
 #include "tc.h"
 #include <time.h>
@@ -20,7 +21,7 @@ static volatile int bases[] = { 2, 3, 4 };
 
 TC_CASE(c23_bases_unsupported)
 {
-    tsg_t f = (tsg_t)tc_crt_proc("timespec_get");
+    tsg_t f = (tsg_t)tc_crt_proc("_timespec64_get");
     struct ts64 ts; unsigned i;
     CHECK(f != NULL);
     if (!f) return;

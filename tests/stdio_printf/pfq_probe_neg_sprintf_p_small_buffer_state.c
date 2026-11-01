@@ -5,9 +5,13 @@
  * crt:   >=90
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _sprintf_p (secure-CRT style parameter validation)
- * note:  PROBE: what _sprintf_p/_swprintf_p do on a too-small buffer: errno == ERANGE, invalid-parameter handler invoked exactly once, buf[0] == 0. Expectations modelled on sprintf_s; each in its own case so one wrong guess does not mask others.
+ * note:  OBSERVED on ucrtbase (Win10 22H2 x64 (19045) ucrtbase.dll observed, raw: "errno_erange errno == ERANGE got=0", "iph_once ... got=0", "buf0_zero b[0] == 0 got=97"; zzp_probe2 "_sprintf_p small
+ *        (opt0): r=-2 errno=0 iph=0 b0=97", "vswprintf_p opt0 small: r=-2 errno=0 iph=0 b0=97"): _sprintf_p/_swprintf_p on a too-small buffer behave like the
+ *        legacy _snprintf family (return -2, errno unchanged, no handler, first count chars copied without NUL so buf[0]=='a'), NOT like
+ *        sprintf_s as originally modelled. sprintf_s-style expectations kept for pre-UCRT CRTs (unverified). Stable.
+ *        NOTE: -2 is the raw ucrtbase __stdio_common_v*printf_p export result (observed, not documented); MSVC headers map any negative result to -1.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -57,7 +61,11 @@ TC_CASE(errno_erange)
     fillc(b, 16); tc_iph_count = 0; errno = 0;
     r = tp_sn(b, 4, "%1$s", "abcdef");
     CHECK(r < 0);
+#if TC_CRT_VER >= 140
+    CHECK_EQ_I(errno, 0);   /* ucrtbase observed: errno untouched */
+#else
     CHECK_EQ_I(errno, ERANGE);
+#endif
 }
 TC_CASE(iph_once)
 {
@@ -65,7 +73,11 @@ TC_CASE(iph_once)
     fillc(b, 16); tc_iph_count = 0;
     r = tp_sn(b, 4, "%1$s", "abcdef");
     CHECK(r < 0);
+#if TC_CRT_VER >= 140
+    CHECK_EQ_I(tc_iph_count, 0);   /* ucrtbase observed: no handler call */
+#else
     CHECK_EQ_I(tc_iph_count, 1);
+#endif
 }
 TC_CASE(buf0_zero)
 {
@@ -73,7 +85,11 @@ TC_CASE(buf0_zero)
     fillc(b, 16);
     r = tp_sn(b, 4, "%1$s", "abcdef");
     CHECK(r < 0);
+#if TC_CRT_VER >= 140
+    CHECK_EQ_I(b[0], 'a');   /* ucrtbase observed: partial copy, buf[0] NOT zeroed */
+#else
     CHECK_EQ_I(b[0], 0);
+#endif
 }
 TC_CASE(wide_errno_erange)
 {
@@ -81,7 +97,11 @@ TC_CASE(wide_errno_erange)
     fillw(b, 16); errno = 0;
     r = tp_swn(b, 4, L"%1$ls", L"abcdef");
     CHECK(r < 0);
+#if TC_CRT_VER >= 140
+    CHECK_EQ_I(errno, 0);
+#else
     CHECK_EQ_I(errno, ERANGE);
+#endif
 }
 TC_CASE(wide_iph_once)
 {
@@ -89,7 +109,11 @@ TC_CASE(wide_iph_once)
     fillw(b, 16); tc_iph_count = 0;
     r = tp_swn(b, 4, L"%1$ls", L"abcdef");
     CHECK(r < 0);
+#if TC_CRT_VER >= 140
+    CHECK_EQ_I(tc_iph_count, 0);
+#else
     CHECK_EQ_I(tc_iph_count, 1);
+#endif
 }
 TC_CASE(wide_buf0_zero)
 {
@@ -97,7 +121,11 @@ TC_CASE(wide_buf0_zero)
     fillw(b, 16);
     r = tp_swn(b, 4, L"%1$ls", L"abcdef");
     CHECK(r < 0);
+#if TC_CRT_VER >= 140
+    CHECK_EQ_I(b[0], L'a');
+#else
     CHECK_EQ_I(b[0], 0);
+#endif
 }
 int main(void)
 {

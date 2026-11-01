@@ -5,10 +5,13 @@
  * funcs: _vsnprintf_l _vsprintf_l _vfprintf_l _vswprintf_l _create_locale _free_locale fopen fclose
  * crt:   >=140
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf format specification syntax; "Parameter validation"
- * note:  PROBE: ucrt rejects an unknown conversion character ("%y", "%lq", "%!") in every _l entry point via the invalid parameter
- *        handler (-1, EINVAL). Same belief as pfl_neg_sprintf_l_bad_specifier, extended to _snprintf_l, _fprintf_l, _swprintf_l, _vsprintf_l.
+ * note:  OBSERVED (Win10 22H2 x64 (19045) ucrtbase.dll observed, raw: "snprintf_l_pct_y r == -1 got=3", "fprintf_l_pct_y ... got=1", "vsprintf_l_pct_bang ... got=1",
+ *        zzp_probe2: "_snprintf_l a%yb: r=3 errno=0 iph=0 b=[ayb]", "_sprintf_l %!: r=1 b=[!]", "_swprintf_l %lq: r=1 w=[q]"): ucrt does NOT reject an unknown
+ *        conversion character ("%y", "%lq", "%!") in the _l entry points: the % and any length prefix are dropped and the character is printed
+ *        literally, no invalid-parameter call, errno unchanged. The old belief (-1/EINVAL/handler) was wrong. C11 7.21.6.1p9: an invalid
+ *        conversion specification is undefined behaviour, so ucrt is conforming. Stable (C locale object, no env dependence).
  *        Temp file tc_pfl_neg_bad_spec_other_l_variants.tmp.
  */
 #include "tc.h"
@@ -25,7 +28,7 @@ TC_CASE(snprintf_l_pct_y)
     char b[16]; int r; v_f = "a%yb";
     tc_iph_count = 0; errno = 0;
     r = pl_snprintf_l(b, 16, v_f, loc, 1);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 3); CHECK_STR(b, "ayb"); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(fprintf_l_pct_y)
 {
@@ -33,22 +36,24 @@ TC_CASE(fprintf_l_pct_y)
     f = fopen(fname, "w"); CHECK(f != NULL); if (!f) return;
     tc_iph_count = 0; errno = 0;
     r = pl_fprintf_l(f, v_f, loc, 1);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
-    fclose(f); remove(fname);
+    CHECK_EQ_I(r, 1); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
+    fclose(f);
+    { char rb[8] = {0}; FILE *g = fopen(fname, "r"); CHECK(g != NULL); if (g) { size_t k = fread(rb, 1, 7, g); fclose(g); CHECK_EQ_I((int)k, 1); CHECK_STR(rb, "y"); } }
+    remove(fname);
 }
 TC_CASE(swprintf_l_pct_lq)
 {
     wchar_t b[16]; int r; v_wf = L"%lq";
     tc_iph_count = 0; errno = 0;
     r = pl_swprintf_l(b, v_wf, loc, 1);
-    CHECK(r < 0); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 1); CHECK(b[0] == L'q' && b[1] == 0); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(vsprintf_l_pct_bang)
 {
     char b[16]; int r; v_f = "%!";
     tc_iph_count = 0; errno = 0;
     r = pl_sprintf_l(b, v_f, loc, 1);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 1); CHECK_STR(b, "!"); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(valid_afterwards)
 {

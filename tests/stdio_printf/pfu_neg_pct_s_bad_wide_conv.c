@@ -5,9 +5,11 @@
  * funcs: sprintf_s
  * crt:   ucrtbase
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf format specification (%ls, %lc); errno EILSEQ
- * note:  PROBING exactly: UCRT sprintf_s converting an unconvertible wide character to the narrow buffer in the "C" locale. Wide chars above 0xFF cannot be represented in the C locale, so the call is expected to return -1 with errno == EILSEQ (no invalid-parameter handler assumed; not asserted). Legacy CRTs may silently skip the character, so they are not listed. ASCII path is deliberately not tested here.
+ * note:  Observed on Windows 10 22H2, "C" locale: sprintf_s with a lone surrogate in %ls returns -1/EILSEQ, but %lc of U+FFFF returns 0 (empty) and
+ *        "[%lc]" of U+263A returns 2 ("[]"), both with errno EILSEQ: the unconvertible character is dropped and the call still succeeds.
+ *        Deviates from C11 7.21.6.1p14 (encoding error -> negative return) for %lc.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -22,17 +24,17 @@ TC_CASE(ls_lone_surrogate)
 }
 TC_CASE(lc_ffff)
 {
-    char b[32]; volatile wint_t c = 0xFFFF; int r;
+    char b[32] = {1}; volatile wint_t c = 0xFFFF; int r;
     errno = 0;
     r = sprintf_s(b, 32, "%lc", c);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EILSEQ);
+    CHECK_EQ_I(r, 0); CHECK_EQ_I(errno, EILSEQ); CHECK_EQ_I(b[0], 0);
 }
 TC_CASE(lc_above_ff)
 {
     char b[32]; volatile wint_t c = 0x263A; int r;
     errno = 0;
     r = sprintf_s(b, 32, "[%lc]", c);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EILSEQ);
+    CHECK_EQ_I(r, 2); CHECK_EQ_I(errno, EILSEQ); CHECK_STR(b, "[]");
 }
 int main(void)
 {

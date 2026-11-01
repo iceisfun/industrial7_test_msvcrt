@@ -3,23 +3,24 @@
  * area:  env
  * funcs:
  * procs: putenv
- * crt:   all
+ * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _putenv ("putenv" is a deprecated POSIX name)
- * note:  PROBE: whether the DLL itself exports the POSIX-name "putenv" (vs. it living only in the static oldnames library).
- *        Expected exported on msvcrt.dll and the older redistributables; unknown for ucrtbase. Recorded only: the single assertion simply fails where putenv is not exported (that is the finding).
+ * note:  Whether the DLL itself exports the POSIX name "putenv". OBSERVED on Win10 22H2: ucrtbase.dll does NOT export "putenv"
+ *        (only _putenv; putenv lives in the static oldnames library). Expected exported on msvcrt.dll and the older
+ *        redistributables, so the assertion is restricted to ucrtbase.
  */
 #include "tc.h"
 
-TC_CASE(putenv_export_present)
+TC_CASE(putenv_export_absent)
 {
-    CHECK(tc_crt_proc("putenv") != NULL);
+    CHECK(tc_crt_proc("putenv") == NULL);   /* observed: ucrtbase.dll does not export the POSIX name */
 }
 
 int main(void)
 {
     tc_begin();
-    TC_RUN(putenv_export_present);
+    TC_RUN(putenv_export_absent);
     return tc_end();
 }

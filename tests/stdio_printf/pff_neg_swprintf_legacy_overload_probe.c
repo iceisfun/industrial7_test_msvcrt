@@ -5,12 +5,11 @@
  * funcs: swprintf _snwprintf
  * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _snwprintf (returns negative when more than count chars are needed), swprintf (C99 form takes a count)
- * note:  PROBES: (1) _snwprintf(NULL,0,L"%f",1.0) is tolerated (no crash, nothing written) and returns -1 because the legacy
- *        _snwprintf reports -1 whenever the output does not fit in count (it is NOT the C99 would-be length 8); (2) _snwprintf(wbuf,0,...) leaves
- *        the buffer untouched; (3) the C99-style swprintf(wbuf,5,L"%f",1.0) returns -1 on truncation, never writes past 5
- *        wchar_t, and NUL-terminates wbuf[4].
+ * note:  Observed on Windows 10 22H2: (1) _snwprintf(NULL,0,L"%f",1.0) is tolerated (no crash, nothing written, no handler call) and returns 8, the
+ *        would-be length, NOT -1; (2) _snwprintf(wbuf,0,...) leaves the buffer untouched; (3) the C99-style swprintf(wbuf,5,L"%f",1.0) returns -1 on
+ *        truncation, never writes past 5 wchar_t, and NUL-terminates wbuf[4].
  */
 #include "tc.h"
 #include <stdio.h>
@@ -24,7 +23,7 @@ TC_CASE(null_count0)
 {
     const wchar_t * volatile f = L"%f"; int r;
     r = _snwprintf(NULL, 0, f, 1.0);
-    CHECK_EQ_I(r, -1);
+    CHECK_EQ_I(r, 8);
 }
 TC_CASE(count0_untouched)
 {

@@ -5,7 +5,7 @@
  * crt:   >=80
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _unlink ("returns -1 and sets errno to EACCES (path specifies a read-only file) or ENOENT"); directory case EACCES follows from DeleteFile ERROR_ACCESS_DENIED mapping (not explicitly documented); Parameter validation (NULL -> EINVAL)
  * note:  Deleting a file that is still open with a sharing mode is in io_neg_unlink_open_file_probe.
  */
@@ -70,8 +70,8 @@ TC_CASE(null_path)
     tc_iph_count = 0; errno = 0;
     r = _unlink((const char *)nm);
     CHECK_EQ_I(r, -1);
-    CHECK_EQ_I(errno, EINVAL);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(errno, ENOENT);   /* observed: NULL path is passed to the OS, no validation */
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(wnull_path)
 {
@@ -80,8 +80,8 @@ TC_CASE(wnull_path)
     tc_iph_count = 0; errno = 0;
     r = _wunlink(nm);
     CHECK_EQ_I(r, -1);
-    CHECK_EQ_I(errno, EINVAL);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(errno, ENOENT);   /* observed: NULL path is passed to the OS, no validation */
+    CHECK_EQ_I(tc_iph_count, 0);
 }
 int main(void)
 {

@@ -9,6 +9,7 @@
  * ref:   MS docs _set_invalid_parameter_handler / "Parameter validation": with no handler installed an invalid parameter terminates the process
  * note:  Child processes (default handler, nothing installed). Each must terminate abnormally (exit code neither 0 nor 77; 77 = survived).
  *        The exact status (0xC0000409) is probed separately in pfv_neg_probe_default_handler_fatal_family_status.
+ *        Win10 22H2 fix: children call tc_iph_default() first (mingw crtexe installs a no-op invalid-parameter handler).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -38,6 +39,7 @@ int main(void)
     const char *c; tc_begin();
     if ((c = tc_child_name()) != NULL) {
         char b[4];
+        tc_iph_default();
         if (tc_strequ(c, "strunc")) sprintf_s(b, sizeof b, "%s", longstr);
         else if (tc_strequ(c, "snull")) sprintf_s(nullbuf, 4, "x");
         else if (tc_strequ(c, "fnull")) fprintf(nullstream, "x");

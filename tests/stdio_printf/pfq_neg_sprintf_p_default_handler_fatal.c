@@ -24,6 +24,7 @@ static int cp(char *b, size_t n, const char *f, ...)
 static int child_main(const char *c)
 {
     char buf[16]; char * volatile nb = NULL; const char * volatile nf = NULL;
+    tc_iph_default(); /* mingw startup installs a no-op handler; restore the CRT default (fatal) */
     if (tc_strequ(c, "null_buf")) cp(nb, 10, "%1$d", 1);
     else if (tc_strequ(c, "null_fmt")) cp(buf, sizeof buf, nf);
     else if (tc_strequ(c, "control")) { int r = cp(buf, sizeof buf, "%1$d", 5); return (r == 1 && buf[0] == '5') ? 77 : 3; }

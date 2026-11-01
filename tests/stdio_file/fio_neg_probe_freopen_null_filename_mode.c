@@ -5,12 +5,14 @@
  * funcs: freopen fopen _fcloseall
  * crt:   >=80
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.21.5.4 (NULL filename = mode change, implementation-defined); MS docs freopen
  * note:  Probes: the Windows CRT is believed NOT to support freopen(NULL, mode, fp) (commonly reported: it returns NULL with
  *        EINVAL via the invalid parameter handler, so "freopen(NULL,"wb",stdout)" cannot be used to switch to binary mode).
  *        Asserted for both "rb" and "wb". An invalid parameter handler is installed so the probe cannot be fatal.
  *        Limited to >=80 because msvcrt.dll has no parameter validation here (a NULL filename could crash it).
+ *        OBSERVED (Win10 22H2, class A): freopen(NULL, "rb"/"wb", fp) returns NULL with errno EBADF (9) and does NOT invoke the invalid-parameter handler (also for "r+" -> "r+");
+ *        the file is not truncated (raw: errno == EINVAL got=9 want=22).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -42,7 +44,7 @@ TC_CASE(null_to_read)
     fp = fopen(F, "r+"); CHECK(fp != NULL); if (!fp) return;
     tc_iph_count = 0; errno = 0;
     r = freopen(nm, "rb", fp);
-    CHECK(r == NULL); CHECK_EQ_I(errno, EINVAL); CHECK(tc_iph_count >= 1);
+    CHECK(r == NULL); CHECK_EQ_I(errno, EBADF); CHECK_EQ_I(tc_iph_count, 0);  /* observed Win10 22H2: EBADF, no handler call */
     _fcloseall();  /* fp may or may not have been closed */
     DeleteFileA(F);
 }
@@ -52,7 +54,7 @@ TC_CASE(null_to_write)
     fp = fopen(F, "r+"); CHECK(fp != NULL); if (!fp) return;
     tc_iph_count = 0; errno = 0;
     r = freopen(nm, "wb", fp);
-    CHECK(r == NULL); CHECK_EQ_I(errno, EINVAL); CHECK(tc_iph_count >= 1);
+    CHECK(r == NULL); CHECK_EQ_I(errno, EBADF); CHECK_EQ_I(tc_iph_count, 0);  /* observed Win10 22H2: EBADF, no handler call */
     _fcloseall();
     CHECK_EQ_I(rd(F, out, sizeof out), 6);  /* file must not have been truncated by the failed call */
     DeleteFileA(F);

@@ -6,9 +6,10 @@
  * procs: _set_invalid_parameter_handler _set_printf_count_output _get_printf_count_output
  * crt:   ucrtbase
  * tier:  p0
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _set_printf_count_output, _get_printf_count_output, printf type field n: %n support is disabled by default; when disabled, printf-family calls invoke the invalid parameter handler
  * note:  Each case restores the count-output flag to 0 before returning.
+A (test bug): enabled_nonsecure_stores_secure_rejects: observed on Win10 22H2 19045 that __stdio_common_vsprintf_s rejects %n (-1, handler once, n untouched) even after _set_printf_count_output(1); the non-_s variant stores the count.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -53,7 +54,7 @@ TC_CASE(sprintf_s_n_disabled)
     CHECK_EQ_I(n, 0x5a5a5a5a);
     CHECK_EQ_I(tc_iph_count, 1);
 }
-TC_CASE(enabled_stores_count)
+TC_CASE(enabled_nonsecure_stores_secure_rejects)
 {
     char b[32]; int n = -1, r, prev;
     tc_iph_count = 0;
@@ -64,9 +65,9 @@ TC_CASE(enabled_stores_count)
     CHECK_EQ_I(n, 3);
     n = -1;
     r = cvs(b, sizeof b, "abcd%n", &n);
-    CHECK_EQ_I(r, 4);
-    CHECK_EQ_I(n, 4);
-    CHECK_EQ_I(tc_iph_count, 0);
+    CHECK_EQ_I(r, -1);     /* the _s variant rejects %n even when enabled (observed) */
+    CHECK_EQ_I(n, -1);
+    CHECK_EQ_I(tc_iph_count, 1);
     CHECK_EQ_I(tc_p__set_printf_count_output(0), 1);
     CHECK_EQ_I(tc_p__get_printf_count_output(), 0);
 }
@@ -76,7 +77,7 @@ int main(void)
     TC_LOAD_PROC(_set_printf_count_output); TC_LOAD_PROC(_get_printf_count_output);
     if (!tc_p__set_printf_count_output || !tc_p__get_printf_count_output) { tc_write("TC FAIL " TC_TEST_ID "::__procs missing\n"); return 2; }
     if (!tc_iph_install()) { tc_write("TC FAIL " TC_TEST_ID "::__no iph\n"); return 2; }
-    TC_RUN(default_disabled); TC_RUN(sprintf_n_disabled); TC_RUN(sprintf_s_n_disabled); TC_RUN(enabled_stores_count);
+    TC_RUN(default_disabled); TC_RUN(sprintf_n_disabled); TC_RUN(sprintf_s_n_disabled); TC_RUN(enabled_nonsecure_stores_secure_rejects);
     tc_p__set_printf_count_output(0);
     return tc_end();
 }

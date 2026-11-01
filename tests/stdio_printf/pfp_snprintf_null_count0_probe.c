@@ -7,7 +7,8 @@
  * tier:  p0
  * conf:  probe
  * ref:   MS docs _snprintf (legacy: negative return when output does not fit); _scprintf
- * note:  PROBE 1: legacy _snprintf(NULL,0,"abc") returns -1 (truncation, no invalid-parameter call) rather than 3 (that is C99 snprintf behaviour).
+ * note:  OBSERVED Win10 22H2 19045 ucrtbase (run twice) 1: _snprintf(NULL,0,"abc") returns 3, the needed length, with no invalid-parameter call (old guess -1 was wrong).
+ *        PROBE 2 (unchanged):
  *        PROBE 2: _scprintf("%n") with %n disabled returns -1 and calls the invalid parameter handler.
  */
 #include "tc.h"
@@ -19,7 +20,7 @@ TC_CASE(snprintf_null_count0_ret)
     char *volatile b = NULL; int r;
     tc_iph_count = 0;
     r = _snprintf(b, 0, "abc");
-    CHECK_EQ_I(r, -1);
+    CHECK_EQ_I(r, 3);
 }
 TC_CASE(snprintf_null_count0_no_iph)
 {

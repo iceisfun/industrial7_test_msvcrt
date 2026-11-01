@@ -6,9 +6,9 @@
  * crt:   ucrtbase
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.12.1 (underflow may set ERANGE); MS docs exp
- * note:  PROBE: whether expf underflow to 0 (x=-1000) sets errno=ERANGE on ucrt (most likely yes); expf(-100) denormal result errno is only logged as a skip-free value, asserted to be 0 or ERANGE.
+ * note:  A: observed on Win10 19045 ucrtbase: expf(-1000) underflows to 0 and leaves errno 0 (TC FAIL line: errno == ERANGE got=0). C11 7.12.1 makes ERANGE on underflow implementation-defined. Was PROBE: whether expf underflow to 0 (x=-1000) sets errno=ERANGE on ucrt (most likely yes); expf(-100) denormal result errno is only logged as a skip-free value, asserted to be 0 or ERANGE. Observed on an FMA3/AVX2 CPU (ucrtbase dispatches FMA3 paths); non-FMA path unverified.
  */
 #include "tc.h"
 #include <math.h>
@@ -23,7 +23,7 @@ static volatile float v_zero = 0.0f, v_one = 1.0f;
 static float F_INF(void) { return v_one / v_zero; }
 static float F_NAN(void) { return v_zero / v_zero; }
 
-TC_CASE(underflow_to_zero) { volatile float x = -1000.0f; errno = 0; (void)expf(x); CHECK_EQ_I(errno, ERANGE); }
+TC_CASE(underflow_to_zero) { volatile float x = -1000.0f; errno = 0; (void)expf(x); CHECK_EQ_I(errno, 0); }   /* observed: no ERANGE */
 TC_CASE(denormal_result) {
     volatile float x = -100.0f; float r; char b[24];
     errno = 0; r = expf(x);

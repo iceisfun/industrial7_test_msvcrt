@@ -6,9 +6,12 @@
  * crt:   win10
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _CrtSetDebugFillThreshold (debug CRT fills remaining buffer with 0xFE on failure)
  * note:  PROBE: release ucrtbase does NOT fill the remainder of dest after a failed wcscpy_s; elements after dest[0] keep their value.
+ *        Observed Win10 22H2 ucrtbase: wcscpy_s(d, 8, L"abcdefgh") returns ERANGE, d[0] = 0, and d[1..7] hold the SOURCE characters
+ *        'b'..'h' (copied before the overflow was detected), i.e. they are neither the old 0x5A5A nor a debug fill pattern. The test
+ *        asserts the absence of a fill pattern (not 0xFEFE/0xFDFD) and the observed copied characters. Stable.
  */
 #include "tc.h"
 #include <errno.h>
@@ -21,8 +24,8 @@ TC_CASE(no_fill_in_release)
     if (!tc_p_wcscpy_s) TC_SKIP("not exported");
     for (i = 0; i < 8; i++) d[i] = 0x5A5A;
     r = tc_p_wcscpy_s(d, 8, s);   /* needs 9 */
-    (void)r;   /* ERANGE / d[0]==0 are documented and asserted in wcs_neg_wcscpy_s_small; not mixed into this probe */
-    for (i = 1; i < 8; i++) CHECK_EQ_I(d[i], 0x5A5A);
+    CHECK_EQ_I(r, ERANGE); CHECK_EQ_I(d[0], 0);
+    for (i = 1; i < 8; i++) { CHECK(d[i] != 0xFEFE && d[i] != 0xFDFD); CHECK_EQ_I(d[i], s[i]); }   /* observed: source chars, no fill */
 }
 int main(void)
 {

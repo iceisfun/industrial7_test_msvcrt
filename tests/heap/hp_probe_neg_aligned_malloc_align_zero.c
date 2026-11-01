@@ -5,10 +5,10 @@
  * crt:   >=80
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _aligned_malloc (alignment must be power of 2)
- * note:  PROBING alignment 0. The CRT's power-of-2 test is believed to be (a & (a-1)) == 0, which accepts 0, after which alignment is raised
- *        to at least sizeof(void*); so expected = success, pointer-aligned, no IPH, errno untouched. Docs only say 'power of 2'; 0 may instead be rejected.
+ * note:  OBSERVED on Win10 22H2 ucrtbase: _aligned_malloc(16, 0) returns NULL, errno EINVAL, one invalid-parameter call
+ *        (alignment 0 is not a power of two for the UCRT). The old "accepts 0" guess was wrong.
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -22,10 +22,9 @@ TC_CASE(align_zero)
     CHECK(tc_iph_install());
     tc_iph_count = 0; errno = 0;
     p = _aligned_malloc(sz, a);
-    CHECK(p != NULL);
-    CHECK_EQ_I(errno, 0);
-    CHECK_EQ_I(tc_iph_count, 0);
-    if (p) CHECK_EQ_U((uintptr_t)p % sizeof(void *), 0);
+    CHECK(p == NULL);
+    CHECK_EQ_I(errno, EINVAL);
+    CHECK_EQ_I(tc_iph_count, 1);
     if (p) _aligned_free(p);
 }
 int main(void)

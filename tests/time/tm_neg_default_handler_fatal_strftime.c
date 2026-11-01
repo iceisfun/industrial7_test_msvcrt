@@ -9,6 +9,7 @@
  * ref:   MS docs strftime (NULL string/format/timeptr, out-of-range tm fields or invalid format codes invoke the invalid parameter handler)
  * note:  Each misuse runs in a child; default handler must terminate (exit != 0, != 77). The exact
  *        NTSTATUS is not asserted here (see the probe tests for 0xC0000409).
+ *        Children call tc_iph_default(): the mingw startup code installs a no-op invalid-parameter handler, which hid the CRT default.
  */
 #include "tc.h"
 #include <time.h>
@@ -29,6 +30,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();  /* mingw startup installs a no-op handler; restore the CRT default (fast-fail) */
         char buf[64]; struct tm t; volatile size_t n = 10;
         t.tm_year = 117; t.tm_mon = 0; t.tm_mday = 1; t.tm_hour = t.tm_min = t.tm_sec = 0; t.tm_wday = 0; t.tm_yday = 0; t.tm_isdst = 0;
         if (c[0] == 'n') strftime(NULL, n, "%Y", &t);

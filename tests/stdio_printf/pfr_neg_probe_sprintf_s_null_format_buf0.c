@@ -6,9 +6,10 @@
  * procs: sprintf_s
  * crt:   >=80
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs sprintf_s
- * note:  PROBE: after sprintf_s(b, n, NULL) fails with EINVAL, is b[0] set to 0? Docs state buffer[0]=0 for the too-small case; for NULL format we guess it is also zeroed.
+ * note:  OBSERVED (Win10 22H2 x64 (19045) ucrtbase.dll observed, raw: "b[0] == 0 got=88"; zzp_probe2 "sprintf_s NULL fmt (inline) b0=120"): after sprintf_s(b, n, NULL) fails with
+ *        EINVAL, b[0] is left unchanged (not zeroed). Original guess wrong; docs promise buf[0]=0 only for the too-small buffer case. Stable.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -30,7 +31,11 @@ TC_CASE(buf0_after_null_format)
     if (!have_iph) TC_SKIP("no iph");
     memset(b, 'X', sizeof b);
     sprintf_s(b, sizeof b, f);
-    CHECK_EQ_I(b[0], 0);
+    #if TC_CRT_VER >= 140
+    CHECK_EQ_I(b[0], 'X');   /* ucrtbase observed: NOT cleared */
+#else
+    CHECK_EQ_I(b[0], 0);     /* original belief for pre-UCRT CRTs (unverified) */
+#endif
 }
 int main(void)
 {

@@ -20,6 +20,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();   /* mingw startup installs a no-op handler; restore the CRT default (fatal) */
         if (c[0] == 'f') _wcsicmp(vn, vs); else _wcsicmp(vs, vn);
         return 77;
     }

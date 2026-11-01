@@ -30,6 +30,7 @@ int main(void)
 {
     const char *c; tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();
         volatile size_t sz = 16, al = (c[0] == 'b') ? 3 : 16;
         void *p = _aligned_malloc(sz, al);
         if (c[0] == 'b') return 77;

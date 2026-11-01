@@ -1,7 +1,8 @@
 /* TC
  * id:    mth_neg_pow_negbase_overflow_sign
  * area:  math_basic
- * funcs: pow
+ * funcs:
+ * procs: pow
  * crt:   ucrtbase
  * tier:  p0
  * kind:  negative
@@ -12,6 +13,9 @@
 #include <math.h>
 #include <errno.h>
 #include <float.h>
+TC_DECL_PROC(double, pow, (double, double));
+#undef pow
+#define pow tc_p_pow
 
 static volatile double v_zero = 0.0, v_one = 1.0;
 static double INF(void) { return v_one / v_zero; }
@@ -26,4 +30,4 @@ TC_CASE(even_overflow) { double r; errno = 0; r = pow(D(-10.0), D(310.0)); CHECK
 TC_CASE(even_fits) { double r; errno = 0; r = pow(D(-10.0), D(308.0)); CHECK_NEAR(r / 1e308, 1.0, 1e-12); CHECK_EQ_I(errno, 0); }
 TC_CASE(dbl_max_sq) { double r; errno = 0; r = pow(D(-DBL_MAX), D(2.0)); CHECK_BITS_D(r, INF()); CHECK_EQ_I(errno, ERANGE); }
 
-int main(void) { tc_begin(); TC_RUN(odd_overflow); TC_RUN(even_overflow); TC_RUN(even_fits); TC_RUN(dbl_max_sq); return tc_end(); }
+int main(void) { tc_begin(); TC_LOAD_PROC(pow); if (!tc_p_pow) { tc_write("TC FAIL " TC_TEST_ID "::proc pow not exported\n"); return 1; } TC_RUN(odd_overflow); TC_RUN(even_overflow); TC_RUN(even_fits); TC_RUN(dbl_max_sq); return tc_end(); }

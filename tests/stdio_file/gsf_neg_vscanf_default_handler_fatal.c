@@ -9,6 +9,8 @@
  * conf:  documented
  * ref:   MS docs Parameter validation: with the default invalid-parameter handler the process terminates
  * note:  Child only; exit status must be non-zero and not 77 (77 = call returned). stdin redirected to an empty file.
+ *        HARNESS FIX (class F, Win10 22H2): mingw crt2.o installs a no-op invalid-parameter handler at startup, so the child survived (exit 77 instead of
+ *        0xC0000409); the child now calls tc_iph_default() (tc.h) to restore the CRT default before the call under test.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -63,6 +65,7 @@ int main(void)
     tc_begin();
     if (tc_child_name() != NULL) {
         const char *volatile nf = NULL; int a = 0, r;
+        tc_iph_default();  /* undo mingw startup no-op handler */
         if (!freopen(INF, "r", stdin)) return 3;
         r = vsc(nf, &a);
         (void)r;

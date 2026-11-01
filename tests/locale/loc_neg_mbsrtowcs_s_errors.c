@@ -6,9 +6,13 @@
  * crt:   >=90
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs mbsrtowcs_s, wcsrtombs_s (return value / error conditions)
- * note:  The *src == NULL case is kept out of this test (see loc_neg_wcsrtombs_s_deref_null_probe).
+ * note:  Win10 triage (class B): on ucrtbase 19045 mbsrtowcs_s with a too-small destination returns 0 (no ERANGE, no handler), and neither
+ *        mbsrtowcs_s nor wcsrtombs_s honours _TRUNCATE (mbsrtowcs_s returns 0, wcsrtombs_s ERANGE). Observed on Windows 10 22H2 build 19045.
+ *        The *src == NULL case is kept out of this test (see loc_neg_wcsrtombs_s_deref_null_probe).
+ *        [scope] observed on ucrtbase 19045 only; the legacy CRTs listed in crt: are [unverified] until the P3 runs.
+ *        [class B] deviates from the runtime-constraint rules of C11 Annex K (K.3.6.x / K.3.9.3.x) that the MS docs mirror; expectation = Windows behavior.
  */
 #include "tc.h"
 #include <wchar.h>
@@ -41,17 +45,24 @@ TC_CASE(mbs_too_small_erange)
 {
     wchar_t d[8]; const char *s = v_s; size_t n = 99; errno_t e; int c0; rst();
     if (!tc_iph_install()) TC_SKIP("no iph");
+    { int k; for (k = 0; k < 8; k++) d[k] = 0x5555; }
     c0 = tc_iph_count; errno = 0;
     e = tc_p_mbsrtowcs_s(&n, d, 3, &s, 5, PST);
-    CHECK_EQ_I(e, ERANGE); CHECK_EQ_I(errno, ERANGE); CHECK_EQ_I(tc_iph_count - c0, 1);
+    /* Win10 22H2 ucrtbase (observed): NO ERANGE for mbsrtowcs_s with count > dst size: returns 0, *pReturnValue == 4, d[0] == 0 (empty), no errno, no
+     * handler call (deviates from the MS docs ERANGE condition). */
+    CHECK_EQ_I(e, 0); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count - c0, 0);
+    CHECK_EQ_U(n, 4); CHECK_EQ_U(d[0], 0); CHECK_EQ_U(d[1], 'e'); CHECK_EQ_U(d[2], 'l'); CHECK(s == v_s + 3);
 }
 TC_CASE(mbs_truncate)
 {
     wchar_t d[8]; const char *s = v_s; size_t n = 99; errno_t e; int c0; rst();
     if (!tc_iph_install()) TC_SKIP("no iph");
+    { int k; for (k = 0; k < 8; k++) d[k] = 0x5555; }
     c0 = tc_iph_count;
     e = tc_p_mbsrtowcs_s(&n, d, 3, &s, TRUNC, PST);
-    CHECK_EQ_I(e, STRUNCATE); CHECK_WSTR(d, L"he"); CHECK_EQ_I(tc_iph_count - c0, 0);
+    /* observed: _TRUNCATE is not honoured by mbsrtowcs_s either: returns 0 (not STRUNCATE), d[0] == 0, no handler call */
+    CHECK_EQ_I(e, 0); CHECK_EQ_I(tc_iph_count - c0, 0);
+    CHECK_EQ_U(n, 4); CHECK_EQ_U(d[0], 0); CHECK_EQ_U(d[1], 'e'); CHECK_EQ_U(d[2], 'l'); CHECK(s == v_s + 3);
 }
 TC_CASE(wcs_src_null)
 {
@@ -73,9 +84,12 @@ TC_CASE(wcs_truncate)
 {
     char d[8]; const wchar_t *s = v_w; size_t n = 99; errno_t e; int c0; rst();
     if (!tc_iph_install()) TC_SKIP("no iph");
+    memset(d, 0x55, sizeof d);
     c0 = tc_iph_count;
     e = tc_p_wcsrtombs_s(&n, d, 3, &s, TRUNC, PST);
-    CHECK_EQ_I(e, STRUNCATE); CHECK_STR(d, "he"); CHECK_EQ_I(tc_iph_count - c0, 0);
+    /* observed: _TRUNCATE is not honoured by wcsrtombs_s: ERANGE with the handler called once, d[0] == 0 (deviates from the _TRUNCATE convention of the other _s functions) */
+    CHECK_EQ_I(e, ERANGE); CHECK_EQ_I(tc_iph_count - c0, 1);
+    CHECK_EQ_U(n, (size_t)-1); CHECK_EQ_I((unsigned char)d[0], 0); CHECK_EQ_I(d[1], 'e'); CHECK_EQ_I(d[2], 'l');
 }
 TC_CASE(wcs_unmappable_eilseq)
 {

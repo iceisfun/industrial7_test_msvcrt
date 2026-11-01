@@ -34,6 +34,7 @@ int main(void)
     tc_begin();
     p_mbscpy_s = (mbscpy_s_t)tc_crt_proc("_mbscpy_s");
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();   /* mingw startup installs a no-op handler; restore the CRT default (fatal) */
         unsigned char buf[2]; static const unsigned char *volatile longs = (const unsigned char *)"toolong";
         static unsigned char *volatile nul = NULL; static const unsigned char *volatile nuls = NULL;
         if (!p_mbscpy_s) return 78;

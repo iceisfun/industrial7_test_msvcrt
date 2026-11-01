@@ -6,10 +6,11 @@
  * procs: asctime_s
  * crt:   >=90
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs asctime_s (tm_sec documented 0-59)
  * note:  Probes (a) tm_sec 60 and 61 (leap seconds) are rejected with EINVAL, (b) tm_yday 999 and tm_isdst 5 are not
  *        validated and succeed. Each is an independent case.
+ *        Win10 19045 ucrtbase accepts tm_sec 60 (rejects 61), matching the C11 tm_sec range 0-60; the old "60 rejected" expectation was wrong.
  */
 #include "tc.h"
 #include <time.h>
@@ -19,7 +20,14 @@ TC_DECL_PROC(int, asctime_s, (char *, size_t, const struct tm *));
 static struct tm t;
 static void good(void) { t.tm_year = 117; t.tm_mon = 9; t.tm_mday = 23; t.tm_hour = 14; t.tm_min = 5; t.tm_sec = 9; t.tm_wday = 1; t.tm_yday = 0; t.tm_isdst = 0; }
 
-TC_CASE(sec60) { char b[26]; good(); t.tm_sec = 60; tc_iph_count = 0; CHECK_EQ_I(tc_p_asctime_s(b, 26, &t), EINVAL); }
+/* observed on Win10 ucrtbase: tm_sec 60 (leap second, C11 7.27.1 range 0-60) is accepted; 61 is rejected */
+TC_CASE(sec60) { char b[26]; good(); t.tm_sec = 60; tc_iph_count = 0;
+#if TC_CRT_VER >= 140
+    CHECK_EQ_I(tc_p_asctime_s(b, 26, &t), 0); CHECK_STR(b, "Mon Oct 23 14:05:60 2017\n"); CHECK_EQ_I(tc_iph_count, 0);
+#else
+    CHECK_EQ_I(tc_p_asctime_s(b, 26, &t), EINVAL);
+#endif
+}
 TC_CASE(sec61) { char b[26]; good(); t.tm_sec = 61; tc_iph_count = 0; CHECK_EQ_I(tc_p_asctime_s(b, 26, &t), EINVAL); }
 TC_CASE(yday999) { char b[26]; good(); t.tm_yday = 999; CHECK_EQ_I(tc_p_asctime_s(b, 26, &t), 0); CHECK_STR(b, "Mon Oct 23 14:05:09 2017\n"); }
 TC_CASE(isdst5)  { char b[26]; good(); t.tm_isdst = 5; CHECK_EQ_I(tc_p_asctime_s(b, 26, &t), 0); CHECK_STR(b, "Mon Oct 23 14:05:09 2017\n"); }

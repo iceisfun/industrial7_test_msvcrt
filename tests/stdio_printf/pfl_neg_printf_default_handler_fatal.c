@@ -9,6 +9,7 @@
  * ref:   MS docs "Parameter validation": without an installed handler an invalid parameter terminates the process
  * note:  Each fatal call runs in a child process (tc_spawn_self). The parent asserts the child did not run to its
  *        "return 77" and crashed with an NTSTATUS error code (top two bits set). The exact status (0xC0000417 / 0xC0000409) is deliberately not asserted.
+ *        Win10 22H2 fix: fatal children call tc_iph_default() first (mingw crtexe installs a no-op invalid-parameter handler).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -19,6 +20,7 @@ static int child_main(const char *name)
     _locale_t l = _create_locale(LC_ALL, "C"); char b[4];
     const char *volatile nullfmt = NULL; const char *volatile big = "abcdefgh";
     if (!l) return 78;
+    if (!tc_strequ(name, "control")) tc_iph_default();   /* mingw startup installs a no-op handler; restore the CRT default */
     if (tc_strequ(name, "nullfmt")) { _sprintf_l(b, (const char *)nullfmt, l); return 77; }
     if (tc_strequ(name, "overflow")) { _sprintf_s_l(b, sizeof b, "%s", l, (const char *)big); return 77; }
     if (tc_strequ(name, "control")) { _sprintf_l(b, "ok", l); return 55; }

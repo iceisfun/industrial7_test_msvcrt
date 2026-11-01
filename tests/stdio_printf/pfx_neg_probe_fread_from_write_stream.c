@@ -3,12 +3,14 @@
  * area:  stdio_printf
  * kind:  negative
  * funcs: fprintf fread fopen fclose ferror clearerr fseek
- * crt:   all
+ * crt:   ucrtbase
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs fread (errno EBADF if stream not open for reading), ferror, clearerr
- * note:  PROBES fread on a stream opened "w" (after fprintf and a rewinding fseek): returns 0, errno EBADF, ferror(f) != 0, cleared by clearerr;
+ * note:  PROBES fread on a stream opened "w" (after fprintf and a rewinding fseek): returns 0, ferror(f) != 0 (observed; the old EBADF guess is wrong: Win10 22H2 leaves errno 0), cleared by clearerr;
  *        the file content is untouched.
+ *        Raw evidence (baseline): TC FAIL ...::fread_fails errno == EBADF got=0 want=9. Only verified on ucrtbase.
+ *        crt narrowed to ucrtbase: the observed behaviour was measured on Win10 22H2 ucrtbase only (older CRTs [unverified]).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -36,7 +38,7 @@ TC_CASE(fread_fails)
     CHECK_EQ_I(fprintf(f, "abc"), 3);
     CHECK_EQ_I(fseek(f, 0, SEEK_SET), 0);
     errno = 0; n = fread(&c, 1, 1, f);
-    CHECK_EQ_U(n, 0); CHECK_EQ_I(errno, EBADF);
+    CHECK_EQ_U(n, 0); CHECK_EQ_I(errno, 0);   /* observed: errno NOT set (ferror is, see next case) */
     fclose(f); DeleteFileA(TMP);
 }
 TC_CASE(ferror_and_clear)

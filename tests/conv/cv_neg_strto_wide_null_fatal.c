@@ -41,7 +41,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) {
+    if ((c = tc_child_name()) != NULL) { tc_iph_default();
         if (c[0] == 's') return 77;
         if (c[0] == 'w' && c[1] == 'c' && c[2] == 's' && c[3] == 't' && c[4] == 'o' && c[5] == 'l') (void)wcstol(nul, NULL, 10);
         else if (c[0] == 'w' && c[1] == 'c') (void)wcstod(nul, NULL);

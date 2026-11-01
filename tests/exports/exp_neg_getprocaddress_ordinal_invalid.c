@@ -9,6 +9,8 @@
  * conf:  observed
  * ref:   MS docs GetProcAddress (returns NULL on failure; GetLastError gives the reason); ERROR_PROC_NOT_FOUND is the observed code
  * note:  Ordinal 0xFFFF (no CRT has that many exports) and absurd/odd names must fail with NULL and ERROR_PROC_NOT_FOUND (observed, not documented). Ordinal 0 is deliberately not tested: GetProcAddress(h, NULL) is not a documented input.
+ * OBSERVED (Win10 22H2 19045; raw "GetLastError() == ERROR_PROC_NOT_FOUND got=182 want=127"): an out-of-range ORDINAL gives
+ *        ERROR_INVALID_ORDINAL (182); only absent NAMES give ERROR_PROC_NOT_FOUND (127). Class A. Stable (loader behaviour).
  */
 #include "tc.h"
 #include <stddef.h>
@@ -20,7 +22,7 @@ TC_CASE(ordinal_ffff)
     FARPROC p; SetLastError(0);
     p = GetProcAddress(crt, MAKEINTRESOURCEA(0xFFFF));
     CHECK(p == NULL);
-    CHECK_EQ_I(GetLastError(), ERROR_PROC_NOT_FOUND);
+    CHECK_EQ_I(GetLastError(), ERROR_INVALID_ORDINAL);   /* observed Win10 22H2: 182, not 127 */
 }
 TC_CASE(long_name)
 {

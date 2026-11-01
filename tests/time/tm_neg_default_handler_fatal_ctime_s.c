@@ -37,6 +37,7 @@ int main(void)
     tc_begin();
     TC_LOAD_PROC(_ctime64_s); TC_LOAD_PROC(_ctime32_s); TC_LOAD_PROC(_wctime64_s);
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();  /* mingw startup installs a no-op handler; restore the CRT default (fast-fail) */
         char b[32]; __time64_t t64 = 0; __time32_t t32 = 0; volatile size_t z = 0;
         if (!tc_p__ctime64_s || !tc_p__ctime32_s || !tc_p__wctime64_s) return 78;
         if (!lstrcmpA(c, "nullbuf")) tc_p__ctime64_s(NULL, 26, &t64);

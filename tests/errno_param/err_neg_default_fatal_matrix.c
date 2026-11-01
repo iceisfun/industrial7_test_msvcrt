@@ -31,6 +31,7 @@ TC_CASE(close_minus1)       { run("close"); }
 static int child_main(const char *c)
 {
     char *volatile np = NULL; volatile int z = 0; (void)z;
+    tc_iph_default();
     if (!strcmp(c, "strcpy_s")) strcpy_s(np, 10, "abc");
     else if (!strcmp(c, "memcpy_s")) memcpy_s(np, 10, "abc", 3);
     else if (!strcmp(c, "wcscpy_s")) { wchar_t d[4]; wcscpy_s(d, (size_t)z, L"a"); }

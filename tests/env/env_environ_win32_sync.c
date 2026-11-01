@@ -5,7 +5,7 @@
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90
  * tier:  p0
  * conf:  observed
- * ref:   _putenv updates the process environment block via SetEnvironmentVariable (inherited by children); kernel32 is the oracle
+ * ref:   _putenv updates the process environment block via SetEnvironmentVariable (inherited by children); kernel32 is the reference
  */
 #include "tc.h"
 #include <stdlib.h>

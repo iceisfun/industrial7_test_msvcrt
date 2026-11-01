@@ -30,7 +30,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) { volatile const char *n = NULL; (void)getenv((const char *)n); return 77; }
+    if ((c = tc_child_name()) != NULL) { tc_iph_default(); volatile const char *n = NULL; (void)getenv((const char *)n); return 77; }
     TC_RUN(child_exits_abnormally_not_77); TC_RUN(child_not_zero);
     return tc_end();
 }

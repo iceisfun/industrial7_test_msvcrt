@@ -19,7 +19,7 @@ OBJDUMP = os.environ.get("TC_OBJDUMP", "x86_64-w64-mingw32-objdump")
 
 # name: (generation, dll, extra cflags)
 TARGETS = {
-    "ucrtbase": (140, "ucrtbase.dll", ["-D_UCRT", "-D__MSVCRT_VERSION__=0xE00"]),
+    "ucrtbase": (140, "ucrtbase.dll", ["-D_UCRT", "-DTC_UCRT", "-D__MSVCRT_VERSION__=0xE00"]),
     "msvcr120": (120, "msvcr120.dll", ["-D__MSVCRT_VERSION__=0x1200"]),
     "msvcr110": (110, "msvcr110.dll", ["-D__MSVCRT_VERSION__=0x1100"]),
     "msvcr100": (100, "msvcr100.dll", ["-D__MSVCRT_VERSION__=0x1000"]),
@@ -93,7 +93,8 @@ def lint_one(path):
     if '#include "tc.h"' not in src: errs.append('missing #include "tc.h"')
     if "int main" not in src: errs.append("missing main")
     if "tc_begin()" not in src or "tc_end()" not in src: errs.append("main must call tc_begin() and tc_end()")
-    ncase = len(re.findall(r"^\s*(?:TC_CASE\((?!name\))|(?!TC_)[A-Z][A-Z0-9_]*CASE\()", src, re.M)); nrun = len(re.findall(r"\bTC_RUN\(", src))
+    csrc = re.sub(r"^#else\b.*?^#endif\b[^\n]*\n?", "", src, flags=re.M | re.S)  # #ifdef TC_UCRT / #else (other-CRT expectation) / #endif: count the first branch only
+    ncase = len(re.findall(r"^\s*(?:TC_CASE\((?!name\))|(?!TC_)[A-Z][A-Z0-9_]*CASE\()", csrc, re.M)); nrun = len(re.findall(r"\bTC_RUN\(", csrc))
     if ncase == 0: errs.append("no TC_CASE")
     if ncase != nrun: errs.append("TC_CASE count %d != TC_RUN count %d" % (ncase, nrun))
     if ncase > 8: errs.append("too many cases (%d > 8): split the test" % ncase)

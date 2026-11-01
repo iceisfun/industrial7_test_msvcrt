@@ -3,12 +3,14 @@
  * area:  stdio_printf
  * funcs:
  * procs: vswprintf_s _vsnwprintf_s _vswprintf_s_l
- * crt:   >=80
+ * crt:   ucrtbase
  * tier:  p2
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf type field characters (no Z); 'w' length prefix documented
- * note:  PROBE: "%Z" and "%wZ" (ntdll UNICODE_STRING style) are not documented CRT conversions; expected -1/EINVAL/handler with a NULL argument. Pre-UCRT CRTs (msvcr80-120) historically implemented %Z (counted-string), so the %Z/%wZ cases are only run on ucrtbase and skipped elsewhere. Separately: "%wC" (w prefix on C) with L'x' expected to give 1 char "x".
+ * note:  "%Z" and "%wZ" (ntdll counted-string style) are not documented CRT conversions, but Win10 22H2 ucrtbase (observed) implements them: with a NULL argument both print "(null)" (6), errno 0, no handler (old guess: -1/EINVAL/handler). Pre-UCRT CRTs (msvcr80-120) historically implemented %Z (counted-string), so the %Z/%wZ cases are only run on ucrtbase and skipped elsewhere. Separately: "%wC" (w prefix on C) with L'x' expected to give 1 char "x".
+ *        Raw evidence (baseline): pct_Z n == -1 got=6 want=-1 ; errno == EINVAL got=0 ; tc_iph_count == 1 got=0 (same for pct_wZ).
+ *        crt narrowed to ucrtbase: the observed behaviour was measured on Win10 22H2 ucrtbase only (older CRTs [unverified]).
  */
 #include "tc.h"
 #include <wchar.h>
@@ -39,13 +41,13 @@ TC_CASE(pct_Z) { wchar_t b[32]; int n;
     TC_SKIP("%Z may be implemented by pre-UCRT");
 #endif
     errno = 0; tc_iph_count = 0; n = w_snwprintf_s(b, 32, (size_t)-1, fz, (void *)0);
-    CHECK_EQ_I(n, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1); }
+    CHECK_EQ_I(n, 6); CHECK_WSTR(b, L"(null)"); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0); }
 TC_CASE(pct_wZ) { wchar_t b[32]; int n;
 #if TC_CRT_VER < 140
     TC_SKIP("%wZ may be implemented by pre-UCRT");
 #endif
     errno = 0; tc_iph_count = 0; n = w_snwprintf_s(b, 32, (size_t)-1, fwz, (void *)0);
-    CHECK_EQ_I(n, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1); }
+    CHECK_EQ_I(n, 6); CHECK_WSTR(b, L"(null)"); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0); }
 TC_CASE(pct_wC) { wchar_t b[32]; int n; tc_iph_count = 0; n = w_snwprintf_s(b, 32, (size_t)-1, fwc, (int)L'x');
     CHECK_EQ_I(n, 1); CHECK_WSTR(b, L"x"); }
 int main(void)

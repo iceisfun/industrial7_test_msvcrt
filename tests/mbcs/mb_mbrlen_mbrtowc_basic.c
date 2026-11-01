@@ -6,9 +6,12 @@
  * crt:   ucrtbase msvcr120 msvcr110
  * tier:  p0
  * kind:  positive
- * conf:  standard
+ * conf:  observed
  * ref:   C11 7.29.6.3.2, 7.29.6.3.1; MS docs mbrtowc, mbrlen
- * note:  msvcr100 and older lack mbrtowc (mingw stub only)*/
+ * note:  msvcr100 and older lack mbrtowc (mingw stub only)
+ *        Observed Win10 22H2 ucrtbase (cp932_split): the call that completes a lead byte given in a previous call returns 2
+ *        (total bytes of the character), not 1 as C11 7.29.6.3.2 (bytes of THIS call) says; first call still returns (size_t)-2.
+ *        Stable.*/
 #include "tc.h"
 #include <wchar.h>
 #include <stdlib.h>
@@ -58,7 +61,7 @@ TC_CASE(cp932_split)
     r = tc_p_mbrtowc(&wc, b1, 1, ST(&st));
     CHECK_EQ_U(r, (size_t)-2);
     r = tc_p_mbrtowc(&wc, b2, 1, ST(&st));
-    CHECK_EQ_U(r, 1);
+    CHECK_EQ_U(r, 2);   /* observed: ucrt returns the whole character length; C11 says 1 */
     CHECK_EQ_I(wc, 0x3042);
     restore_c();
 }

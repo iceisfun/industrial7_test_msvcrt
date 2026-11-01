@@ -5,12 +5,12 @@
  * funcs: snprintf sprintf_s
  * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf width/precision specification (no stated limit)
  * note:  PROBES: a precision or width literal in the format string that does not fit in an int (2147483648, 99999999999)
- *        makes the format invalid: result -1, invalid-parameter handler called once, nothing written past the buffer.
- *        sprintf_s additionally leaves buf[0]==0. errno value is not asserted. The sprintf_s case asserts only the
- *        buf[0]==0 / -1 / iph part. Canary bytes after the buffer must stay intact in every case.
+ *        makes the format invalid: result -1, nothing written past the buffer. The invalid-parameter handler is NOT called (observed).
+ *        sprintf_s additionally leaves buf[0]==0. errno value is not asserted. Canary bytes after the buffer must stay intact in every case.
+ *        A (test bug): on Win10 22H2 19045 these return -1 but never call the invalid-parameter handler (tc_iph_count stays 0), even for sprintf_s.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -24,28 +24,28 @@ TC_CASE(snprintf_prec_2p31)
     struct tb t; const char * volatile f = "%.2147483648f"; int r; arm(&t);
     tc_iph_count = 0;
     r = snprintf(t.b, 32, f, 1.0);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 1); CHECK(canary_ok(&t));
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 0); CHECK(canary_ok(&t));
 }
 TC_CASE(sprintf_s_prec_huge)
 {
     struct tb t; const char * volatile f = "%.99999999999f"; int r; arm(&t);
     tc_iph_count = 0;
     r = sprintf_s(t.b, 32, f, 1.0);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(t.b[0], 0); CHECK_EQ_I(tc_iph_count, 1); CHECK(canary_ok(&t));
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(t.b[0], 0); CHECK_EQ_I(tc_iph_count, 0); CHECK(canary_ok(&t));
 }
 TC_CASE(snprintf_width_2p31)
 {
     struct tb t; const char * volatile f = "%2147483648f"; int r; arm(&t);
     tc_iph_count = 0;
     r = snprintf(t.b, 32, f, 1.0);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 1); CHECK(canary_ok(&t));
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 0); CHECK(canary_ok(&t));
 }
 TC_CASE(snprintf_exp_prec_overflow)
 {
     struct tb t; const char * volatile f = "%.4294967296e"; int r; arm(&t);
     tc_iph_count = 0;
     r = snprintf(t.b, 32, f, 1.0);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 1); CHECK(canary_ok(&t));
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 0); CHECK(canary_ok(&t));
 }
 int main(void)
 {

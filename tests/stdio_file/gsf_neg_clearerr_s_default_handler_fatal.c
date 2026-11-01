@@ -27,6 +27,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
+    if (tc_child_name()) tc_iph_default();
     if ((c = tc_child_name()) != NULL) { clearerr_s(nullfp); return 77; }
     TC_RUN(child_terminates);
     return tc_end();

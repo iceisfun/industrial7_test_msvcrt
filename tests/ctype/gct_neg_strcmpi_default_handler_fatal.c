@@ -32,6 +32,7 @@ int main(void)
     const char *n;
     tc_begin();
     if ((n = tc_child_name()) != NULL) {
+        tc_iph_default();   /* mingw startup installs a no-op handler; restore the CRT default (fatal) */
         if (tc_strequ(n, "strcmpi")) (void)_stricmp(nul, a);
         else if (tc_strequ(n, "memicmp")) (void)_memicmp(nul, a, 1);
         else if (tc_strequ(n, "wcsicoll")) (void)_wcsicoll(wa, wnul);

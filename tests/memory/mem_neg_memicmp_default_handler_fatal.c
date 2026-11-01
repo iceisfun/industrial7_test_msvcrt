@@ -23,7 +23,7 @@ int main(void)
     static void *volatile v_null = NULL;
     static volatile size_t v_n = 4;
     tc_begin();
-    if (tc_child_name()) { (void)_memicmp(v_null, buf, v_n); return 77; }
+    if (tc_child_name()) { tc_iph_default(); (void)_memicmp(v_null, buf, v_n); return 77; }
     TC_RUN(child_terminates_abnormally);
     return tc_end();
 }

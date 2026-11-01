@@ -5,11 +5,10 @@
  * funcs: sprintf _snprintf
  * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf %lc/%ls; wctomb EILSEQ
- * note:  PROBE: in the "C" locale a wide char above 0xFF cannot convert to a narrow char: output call returns -1 with
- *        errno EILSEQ. Values 0x80-0xFF are deliberately not asserted. Handler is installed in case it is invoked.
- *        Narrowed to ucrtbase: pre-UCRT CRTs may skip the %lc char (no_output) rather than failing the whole call.
+ * note:  Observed on Windows 10 22H2, "C" locale: sprintf("%lc", U+4E2D) sets errno EILSEQ but returns 0 (empty successful output) instead of -1;
+ *        %ls / _snprintf %ls of the same char return -1/EILSEQ. Deviates from C11 7.21.6.1p14 (encoding error -> negative return).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -19,7 +18,7 @@ TC_CASE(lc_sprintf)
 {
     char b[32]; const char * volatile f = "%lc"; volatile wchar_t w = 0x4E2D; int r;
     errno = 0; r = sprintf(b, f, (int)w);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EILSEQ);
+    CHECK_EQ_I(r, 0); CHECK_EQ_I(errno, EILSEQ);
 }
 TC_CASE(ls_sprintf)
 {

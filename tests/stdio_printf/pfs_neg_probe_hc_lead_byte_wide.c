@@ -7,7 +7,8 @@
  * kind:  negative
  * conf:  probe
  * ref:   UCRT: %hc in wide printf converts a narrow char with the current locale's multibyte rules; failure -> EILSEQ, -1
- * note:  PROBE: in a cp932 locale a lone DBCS lead byte 0x81 passed to %hc yields -1/EILSEQ. Control: ASCII 'A' and the single-byte katakana 0xA1 (U+FF61) convert. Cases skip when the Japanese locale is not installed.
+ * note:  OBSERVED Win10 22H2 19045 ucrtbase (run twice): in a cp932 locale a lone DBCS lead byte 0x81 passed to %hc yields return 0 (nothing written) with errno EILSEQ, not -1.
+ *        Locale dependent: skips when the cp932 locale is missing. Control: ASCII 'A' and the single-byte katakana 0xA1 (U+FF61) convert. Cases skip when the Japanese locale is not installed.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -27,7 +28,7 @@ TC_CASE(lead_byte_fails)
     errno = 0;
     n = _snwprintf(w, 8, wf_hc, (char)lead);
     setlocale(LC_ALL, "C");
-    CHECK_EQ_I(n, -1); CHECK_EQ_I(errno, EILSEQ);
+    CHECK_EQ_I(n, 0); CHECK_EQ_I(errno, EILSEQ);
 }
 TC_CASE(katakana_single_byte_ok)
 {

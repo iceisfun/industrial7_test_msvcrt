@@ -33,6 +33,7 @@ int main(void)
     const char *c;
     tc_begin(); TC_LOAD_PROC(wcscpy_s);
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();   /* mingw startup installs a no-op handler; restore the CRT default (fatal) */
         wchar_t d[2];
         if (!tc_p_wcscpy_s) return 78;
         if (c[0] == 'n') tc_p_wcscpy_s(vnull, 10, L"x");

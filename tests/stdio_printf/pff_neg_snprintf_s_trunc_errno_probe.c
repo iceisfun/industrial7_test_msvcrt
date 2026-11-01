@@ -3,12 +3,14 @@
  * area:  stdio_printf
  * funcs:
  * procs: __stdio_common_vsnprintf_s _snprintf_s
- * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90 msvcrt
+ * crt:   ucrtbase
  * tier:  p2
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _snprintf_s (errno on _TRUNCATE truncation)
- * note:  probed: truncation under _TRUNCATE sets errno to ERANGE (docs mention ERANGE for _s string functions truncation)
+ * note:  probed: truncation under _TRUNCATE returns -1 and leaves errno untouched (0)
+ *        crt narrowed to ucrtbase: errno==0 is observed only there [older CRTs unverified].
+ *        A (test bug): observed errno == 0 after _TRUNCATE truncation on Win10 22H2 19045 (ERANGE is not set).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -27,5 +29,5 @@ TC_DECL_PROC(int, _snprintf_s, (char *, size_t, size_t, const char *, ...));
 static int p_ok;
 
 TC_CASE(errno_erange) { char b[16]; volatile double v = 1.5; int n; if (!p_ok) TC_SKIP("none");
-  errno = 0; n = xsnprintf_s(b, 5, (size_t)-1, "%f", v); CHECK_EQ_I(n, -1); CHECK_EQ_I(errno, ERANGE); }
+  errno = 0; n = xsnprintf_s(b, 5, (size_t)-1, "%f", v); CHECK_EQ_I(n, -1); CHECK_EQ_I(errno, 0); }
 int main(void) { tc_begin(); tc_iph_install(); p_ok = HAVE_X(); CHECK(p_ok); TC_RUN(errno_erange); return tc_end(); }

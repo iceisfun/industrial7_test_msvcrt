@@ -5,10 +5,11 @@
  * funcs: _scprintf
  * crt:   >=140
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _scprintf; "Parameter validation"
- * note:  PROBE: _scprintf with an invalid conversion ('%y') and with a trailing lone '%' ("abc%") is expected to
- *        return -1, call the invalid-parameter handler once and set errno to EINVAL on ucrtbase.
+ * note:  _scprintf with an invalid conversion ('%y') and with a trailing lone '%' ("abc%"): observed Win10 22H2 ucrtbase does not validate:
+ *        "%y" -> 1 (counts the literal 'y'), "abc%" -> 3, handler not called, errno untouched (0).
+ *        Raw evidence (baseline): probe_y r == -1 got=1 ; tc_iph_count == 1 got=0 ; probe_trailing got=3 ; probe_errno errno == EINVAL got=0.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -18,19 +19,19 @@ TC_CASE(probe_y)
 {
     int r; tc_iph_count = 0; errno = 0;
     r = _scprintf("%y");
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 1); CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(probe_trailing)
 {
     int r; tc_iph_count = 0; errno = 0;
     r = _scprintf("abc%");
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 3); CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(probe_errno)
 {
     int r; errno = 0; tc_iph_count = 0;
     r = _scprintf("%y");
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL);
+    CHECK_EQ_I(r, 1); CHECK_EQ_I(errno, 0);
 }
 TC_CASE(valid_control)
 {

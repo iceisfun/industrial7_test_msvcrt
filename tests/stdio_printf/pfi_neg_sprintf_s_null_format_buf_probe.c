@@ -6,9 +6,11 @@
  * crt:   >=80
  * tier:  p0
  * kind:  negative
- * conf:  probe
- * note:  PROBE: whether sprintf_s(buf, n, NULL) also clears buf[0] (docs only promise -1/EINVAL/handler).
+ * conf:  observed
  * ref:   MS docs sprintf_s
+ * note:  OBSERVED (Win10 22H2 x64 (19045) ucrtbase.dll observed, zzp_probe2: "sprintf_s NULL fmt (inline): r=-1 errno=22 iph=1 b0=120"): sprintf_s(b, n, NULL) returns -1/EINVAL
+ *        and calls the handler once, but leaves buf[0] untouched (120='x'); the guess that buf[0] is zeroed was wrong (the docs only promise
+ *        buf[0]=0 for the too-small case). Stable.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -29,7 +31,11 @@ TC_CASE(probe)
     CHECK(HAVE_SS); if (!HAVE_SS || !tc_iph_install()) return;
     b[0] = 'x';
     SS(b, sizeof b, f);
-    CHECK_EQ_I(b[0], 0);
+    #if TC_CRT_VER >= 140
+    CHECK_EQ_I(b[0], 'x');   /* ucrtbase observed: NOT cleared */
+#else
+    CHECK_EQ_I(b[0], 0);     /* original belief for pre-UCRT CRTs (unverified) */
+#endif
 }
 
 int main(void)

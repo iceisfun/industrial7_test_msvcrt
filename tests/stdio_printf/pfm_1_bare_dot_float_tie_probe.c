@@ -4,9 +4,11 @@
  * funcs: sprintf
  * crt:   all
  * tier:  p0
- * conf:  probe
- * ref:   C11 7.21.6.1 (exact decimal conversion); ucrt rounds exact ties to even, older CRTs away from zero
- * note:  Exact-tie rounding to even on ucrt arrived with Windows 10 2004 (19041); earlier ucrt builds round half away. PROBE: %.f of exact tie 2.5 -> "2" on ucrt (round-half-even on exact value), "3" on pre-2015 CRTs.
+ * conf:  observed
+ * ref:   C11 7.21.6.1 (exact decimal conversion); tie rounding on ucrtbase is selected by the options passed to the worker
+ * note:  Observed on Windows 10 22H2 (19045) ucrtbase: the mingw sprintf passes options=2 (no STANDARD_ROUNDING 0x20), so %.f of the exact tie
+ *        2.5 gives "3" (legacy half away from zero), same as the older CRTs. With options 0x22 the same ucrtbase gives "2" (reference probe; see
+ *        pff_f_round_ties_ucrt). Toolchain/options dependent, not Windows-build dependent, not an ISO C deviation of ucrtbase (class F).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -15,10 +17,6 @@
 
 TC_CASE(tie_2_5) {
     char b[16]; volatile double v = 2.5; sprintf(b, "%.f", v);
-#if TC_AT_LEAST(140)
-    CHECK_STR(b, "2");
-#else
     CHECK_STR(b, "3");
-#endif
 }
 int main(void) { tc_begin(); TC_RUN(tie_2_5); return tc_end(); }

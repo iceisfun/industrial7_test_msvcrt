@@ -3,7 +3,7 @@
  * area:  negative_fatal
  * kind:  negative
  * funcs: abort
- * procs: _onexit _crt_atexit
+ * procs: _crt_atexit
 
  * crt:   all
  * tier:  p1
@@ -29,7 +29,7 @@ int main(void)
 {
     const char *c; tc_begin();
     if ((c = tc_child_name()) != NULL) {
-#ifdef TC_UCRT
+#if defined(TC_UCRT) || defined(_UCRT)   /* tools/tc.py defines _UCRT, never TC_UCRT, for the ucrtbase target */
         int (__cdecl *oe)(void (__cdecl *)(void)) = (void *)tc_crt_proc("_crt_atexit");  /* _crt_atexit takes a void(void) callback; used on ucrt */
         if (!oe) return 78;
         oe(hv);

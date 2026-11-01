@@ -6,9 +6,10 @@
  * crt:   ucrtbase msvcr120
  * tier:  p0
  * kind:  negative
- * conf:  standard
+ * conf:  observed
  * ref:   C11 7.3.5.1-2, 7.3.6.1-2, G.6.1.1, G.6.1.2, G.6.2.1, G.6.2.2
- * note:  Arguments outside the real domain (|x|>1) are valid for complex inverse functions: no NaN, no errno/IPH.
+ * note:  B: deviates from C11 G.6.2.2/7.3.5.2: observed Win10 19045 ucrtbase casin(2+0i) = (pi/2, +0) and casin(2-0i) = (pi/2, -0); the mathematically correct imaginary part is +-1.3169578969248166 (cacos(2+0i) = (0, -1.3169578969248166) IS correct on Windows). Other cases are unchanged (standard). Observed on an FMA3/AVX2 CPU (ucrtbase dispatches FMA3 paths); non-FMA path unverified.
+ *        Arguments outside the real domain (|x|>1) are valid for complex inverse functions: no NaN, no errno/IPH.
  */
 #include "tc.h"
 #include <math.h>
@@ -33,9 +34,9 @@ static void iph(void) { tc_iph_install(); tc_iph_count = 0; }
 TC_CASE(cacos_gt1_is_finite) { cplx r = call("cacos", 2.0, 0.0);
     CHECK(!isnan_(r.re)); CHECK_NEAR(r.re, 0.0, 1e-12); CHECK_NEAR(r.im, -1.3169578969248166, 1e-12); }
 TC_CASE(casin_gt1_is_finite) { cplx r = call("casin", 2.0, 0.0);
-    CHECK_NEAR(r.re, PI / 2, 1e-12); CHECK_NEAR(r.im, 1.3169578969248166, 1e-12); }
+    CHECK_NEAR(r.re, PI / 2, 1e-12); CHECK_BITS_D(r.im, 0.0); /* B */ }
 TC_CASE(casin_gt1_negzero_conj) { cplx r = call("casin", 2.0, -0.0);
-    CHECK_NEAR(r.re, PI / 2, 1e-12); CHECK_NEAR(r.im, -1.3169578969248166, 1e-12); }
+    CHECK_NEAR(r.re, PI / 2, 1e-12); CHECK_BITS_D(r.im, -0.0); /* B */ }
 TC_CASE(nan_nan) { cplx a = call("cacos", QNAN(), QNAN()), b = call("cacosh", QNAN(), QNAN());
     CHECK(isnan_(a.re)); CHECK(isnan_(a.im)); CHECK(isnan_(b.re)); CHECK(isnan_(b.im)); }
 TC_CASE(casin_inf_inf) { cplx r = call("casin", PINF(), PINF()); CHECK_NEAR(r.re, PI / 4, 1e-12); CHECK(r.im == PINF()); }

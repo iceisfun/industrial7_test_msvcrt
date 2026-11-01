@@ -5,8 +5,11 @@
  * funcs: _snscanf_s _snwscanf_s
  * crt:   >=90
  * tier:  p1
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _snscanf_s, _snwscanf_s: destination size too small invokes the invalid parameter handler
+ * note:  CORRECTED for Win10 22H2 ucrtbase (observed 2026-10-31): a too-small _s destination does NOT call the invalid parameter handler (tc_iph_count stays 0);
+ *        the sentinel/overflow checks below still hold. MS docs do not document a handler call for this case. Stable (2 runs).
+ *        Observed on Win10 22H2 ucrtbase only; the same expectation on the other CRTs (>=90) is [unverified] and must be confirmed when those CRTs are run in the VM.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -18,14 +21,14 @@ TC_CASE(narrow)
     char a[8]; int i; for (i = 0; i < 8; i++) a[i] = 'Z';
     CHECK(tc_iph_install()); tc_iph_count = 0; vin = "abcdefgh";
     (void)_snscanf_s((const char *)vin, 8, "%s", a, (unsigned)4);
-    CHECK(tc_iph_count >= 1); CHECK_EQ_I(a[4], 'Z'); CHECK_EQ_I(a[7], 'Z');
+    CHECK_EQ_I(tc_iph_count, 0); CHECK_EQ_I(a[4], 'Z'); CHECK_EQ_I(a[7], 'Z');
 }
 TC_CASE(wide)
 {
     wchar_t a[8]; int i; for (i = 0; i < 8; i++) a[i] = L'Z';
     CHECK(tc_iph_install()); tc_iph_count = 0; vwin = L"abcdefgh";
     (void)_snwscanf_s((const wchar_t *)vwin, 8, L"%s", a, (unsigned)4);
-    CHECK(tc_iph_count >= 1); CHECK_EQ_U(a[4], L'Z'); CHECK_EQ_U(a[7], L'Z');
+    CHECK_EQ_I(tc_iph_count, 0); CHECK_EQ_U(a[4], L'Z'); CHECK_EQ_U(a[7], L'Z');
 }
 TC_CASE(count_smaller_control)
 {

@@ -9,6 +9,8 @@
  * conf:  probe
  * ref:   C11 7.27.2.5 (UB for NULL); MS parameter validation convention
  * note:  PROBE: timespec_get_p(NULL, TIME_UTC) and timespec64_get_p(NULL, TIME_UTC) return 0, set errno=EINVAL and call the invalid-parameter handler once.
+ * Class D: "timespec_get" is not in the Win10 22H2 ucrtbase export table (baseline exit 2, no TC output); it is a header inline over _timespec64_get,
+ *        so timespec_get_p falls back to the exported _timespec64_get.
  */
 #include "tc.h"
 
@@ -23,6 +25,8 @@ static void load(void)
     timespec_get_p = (tc_tsget64_t)tc_crt_proc("timespec_get");
     timespec64_get_p = (tc_tsget64_t)tc_crt_proc("_timespec64_get");
     timespec32_get_p = (tc_tsget32_t)tc_crt_proc("_timespec32_get");
+    /* class D: ucrtbase does not export timespec_get; <time.h> inlines it over _timespec64_get, so test that exported entry point */
+    if (!timespec_get_p) timespec_get_p = timespec64_get_p;
 }
 #include <errno.h>
 

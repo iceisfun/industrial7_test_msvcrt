@@ -5,9 +5,10 @@
  * funcs: fread fopen fclose
  * crt:   all
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS _filbuf legacy behaviour
  * note:  PROBE: errno == EBADF after fread on a stream opened "w". Some CRT generations may leave errno untouched.
+ *        TRIAGE win1093[34])?#934, class A): fread on a stream opened "w" leaves errno untouched (0) on ucrtbase 10.0.19045 (observed got=0). EBADF kept for non-UCRT (unverified).
  */
 #include "tc.h"
 #define TC_S2(x) #x
@@ -22,7 +23,11 @@ TC_CASE(errno_ebadf)
     fp = fopen(fname, "w"); CHECK(fp != NULL); if (!fp) return;
     errno = 0;
     fread(buf, 1, 4, fp);
+#if TC_AT_LEAST(140)
+    CHECK_EQ_I(errno, 0);                  /* observed ucrtbase 10.0.19045: errno untouched */
+#else
     CHECK_EQ_I(errno, EBADF);
+#endif
     fclose(fp);
 }
 int main(void)

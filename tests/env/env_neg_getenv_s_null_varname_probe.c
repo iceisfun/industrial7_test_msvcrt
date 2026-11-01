@@ -6,10 +6,13 @@
  * crt:   >=80
  * tier:  p2
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs getenv_s
  * note:  PROBE: getenv_s with varname == NULL invokes the invalid-parameter handler and returns EINVAL (not listed
  *        explicitly in the docs error table).
+ *        Win10 22H2 19045 (observed): getenv_s with varname == NULL is NOT rejected: returns 0, *pReturnValue = 0, no handler call. (MS docs list EINVAL;
+ *        Windows deviates from the docs table.)
+ *        [unverified] on other CRTs: only ucrtbase 19045 was observed; the expectation is gated with TC_AT_LEAST(140) and the original expectation is kept for older CRTs.
  */
 #include "tc.h"
 #include <errno.h>
@@ -23,8 +26,16 @@ TC_CASE(null_varname_einval)
     if (!tc_iph_install()) TC_SKIP("no iph");
     tc_iph_count = 0;
     r = tc_p_getenv_s(&n, buf, sizeof buf, NULL);
+
+#if TC_AT_LEAST(140)
+    CHECK_EQ_I(r, 0);               /* observed: not validated */
+    CHECK_EQ_I(tc_iph_count, 0);
+    CHECK_EQ_U(n, 0);
+#else
     CHECK_EQ_I(r, EINVAL);
     CHECK_EQ_I(tc_iph_count, 1);
+#endif
+
 }
 int main(void)
 {

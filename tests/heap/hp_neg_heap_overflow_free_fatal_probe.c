@@ -33,7 +33,7 @@ int main(void)
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
         volatile unsigned char *p = (volatile unsigned char *)malloc(v_n);
-        size_t i, n = v_n + (c[0] == 'o' ? 256 : 0);
+        size_t i, n = v_n + (c[1] == 'v' ? 256 : 0);
         void *q;
         for (i = 0; i < n; i++) p[i] = 0xCC;
         free((void *)p);

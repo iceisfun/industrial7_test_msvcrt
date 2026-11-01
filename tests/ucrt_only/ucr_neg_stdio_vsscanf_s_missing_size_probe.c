@@ -6,12 +6,14 @@
  * procs: __stdio_common_vsscanf
  * crt:   win10
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs scanf_s (buffer size argument required after %s/%c/%[); Parameter validation
  * note:  (size argument is passed as size_t, the rsize_t the callee reads from the va_list)
  *        PROBES secure-CRT (option bit 1) behaviour when the size argument is 0 (%s, %c) or too small for the scanset
  *        (size 1, %[a-z] needs room for NUL): return 0, no write past the given size, buf[0] cleared for %s/%[ (from memory).
  *        errno may be unset or ERANGE; both accepted. Invalid-parameter handler is installed and counted (not asserted).
+ * note:  OBSERVED (Win10 22H2 19045; raw "errno == 0 || errno == ERANGE" failed; explore probe errno=12, handler count 0): scanf_s with a zero (or too small)
+ *        buffer size returns 0 and sets errno ENOMEM (12), without calling the invalid-parameter handler. Class A.
  */
 #include "tc.h"
 #include <stdarg.h>
@@ -38,7 +40,7 @@ TC_CASE(s_size0)
     CHECK_EQ_I(r, 0);
     CHECK(b[0] == 'z' || b[0] == 0);
     CHECK(b[1] == 'z');
-    CHECK(errno == 0 || errno == ERANGE);
+    CHECK_EQ_I(errno, ENOMEM);   /* observed Win10 22H2: 12, not 0/ERANGE */
 }
 TC_CASE(c_size0)
 {
@@ -48,7 +50,7 @@ TC_CASE(c_size0)
     CHECK_EQ_I(r, 0);
     CHECK(b[0] == 'z' || b[0] == 0);
     CHECK(b[1] == 'z');
-    CHECK(errno == 0 || errno == ERANGE);
+    CHECK_EQ_I(errno, ENOMEM);   /* observed Win10 22H2: 12, not 0/ERANGE */
 }
 TC_CASE(scanset_size1)
 {

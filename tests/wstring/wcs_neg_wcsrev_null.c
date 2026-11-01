@@ -5,11 +5,13 @@
  * crt:   >=80
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _strrev, _wcsrev
  * note:  PROBE: _wcsrev(NULL) returns NULL, sets errno EINVAL and invokes the invalid-parameter handler
  *        (parameter validation believed present in VS2005+ CRT; docs silent). Each assertion runs in its own
  *        child process (with a non-fatal handler installed) so an access violation cannot mask the other cases.
+ *        Observed Win10 22H2 ucrtbase: _wcsrev(NULL) is NOT validated: it faults with 0xC0000005 even with a non-fatal handler installed,
+ *        so the three assertions collapse into the single fault assertion (class C). Stable.
  */
 #include "tc.h"
 #include <wchar.h>
@@ -18,21 +20,22 @@
 static int child(const char *n)
 {
     wchar_t *volatile s = NULL; wchar_t *r;
+    (void)n;
     if (!tc_iph_install()) return 78;
     errno = 0; tc_iph_count = 0;
     r = _wcsrev(s);
-    if (n[0] == 'r') return r == NULL ? 0 : 1;
-    if (n[0] == 'e') return errno == EINVAL ? 0 : 2;
-    return tc_iph_count == 1 ? 0 : 3;
+    (void)r;
+    return 0;   /* only reached when the call did not fault */
 }
-static void run(const char *n) { DWORD code = 99; int ran = tc_spawn_self(n, &code, 20000); CHECK(ran); CHECK_EQ_U(code, 0); }
-TC_CASE(returns_null) { run("ret"); }
-TC_CASE(errno_einval) { run("err"); }
-TC_CASE(iph_invoked)  { run("iph"); }
+TC_CASE(null_access_violation)
+{
+    DWORD code = 99; int ran = tc_spawn_self("nullarg", &code, 20000);
+    CHECK(ran); CHECK_EQ_U(code, TC_STATUS_ACCESS_VIOLATION);   /* observed: no NULL validation */
+}
 int main(void)
 {
     tc_begin();
     if (tc_child_name()) return child(tc_child_name());
-    TC_RUN(returns_null); TC_RUN(errno_einval); TC_RUN(iph_invoked);
+    TC_RUN(null_access_violation);
     return tc_end();
 }

@@ -6,7 +6,10 @@
  * tier:  p0
  * conf:  standard
  * ref:   C11 7.28.1.4 c32rtomb; UTF-8 encoding (RFC 3629); MS docs c32rtomb
- * note:  UTF-8 cases need Windows 10 1803+ (setlocale(".UTF-8") non-NULL); skipped otherwise.
+ * note:  Win10 triage (class B): in a 1252 locale ucrtbase c32rtomb(U+20AC) yields the 3-byte UTF-8 E2 82 AC (not the single
+ *        byte 0x80); observed on Windows 10 22H2 build 19045, deviates from C11 7.28.1.4.
+ *        UTF-8 cases need Windows 10 1803+ (setlocale(".UTF-8") non-NULL); skipped otherwise.
+ *        [class B] deviates from C11 7.28.1 (locale-encoding conversion); the MS docs state c16rtomb/c32rtomb convert to UTF-8 and mbrtoc16/mbrtoc32 decode UTF-8.
  */
 #include "tc.h"
 #include <locale.h>
@@ -71,7 +74,8 @@ TC_CASE(cp1252_euro)
     unsigned char o[16];
     v_loc = "English_United States.1252";
     if (!setlocale(LC_ALL, v_loc)) TC_SKIP("no 1252 locale");
-    CHECK_EQ_U(enc(0x20AC, o), 1); CHECK_EQ_U(o[0], 0x80); CHECK_EQ_U(o[1], 0xEE);
+    /* Win10 22H2 ucrtbase: c32rtomb always emits UTF-8, even when the locale code page is 1252 (observed; deviates from C11 7.28.1.4 "current locale") */
+    CHECK_EQ_U(enc(0x20AC, o), 3); CHECK_EQ_U(o[0], 0xE2); CHECK_EQ_U(o[1], 0x82); CHECK_EQ_U(o[2], 0xAC); CHECK_EQ_U(o[3], 0xEE);
     CHECK_EQ_U(enc('A', o), 1); CHECK_EQ_U(o[0], 'A');
     setlocale(LC_ALL, "C");
 }

@@ -5,9 +5,9 @@
  * crt:   ucrtbase msvcr120
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   IEEE 754-2008 maxNum/minNum; C11 F.10.9.2
- * note:  PROBE: signalling NaN operands: numeric result returned, FE_INVALID (_SW_INVALID 0x10) recorded, quiet bit of NaN result, fmin(-0.0,NaN) sign, errno unchanged (0) for NaN operands. On x86 (32-bit) d_snan() returned via x87 would be quieted; x64 only.
+ * note:  B: deviates from C11 F.10.9.2 / IEEE 754: observed on Win10 19045 ucrtbase: fmax/fmin with an sNaN operand return the numeric operand and raise NO FE_INVALID (_statusfp()&0x10 == 0), and fmax(sNaN,sNaN) returns the sNaN bits unchanged (0x7ff0000000000001, quiet bit clear). C11 F.10.9.2 / IEEE 754 say invalid should be raised. Was PROBE: signalling NaN operands: numeric result returned, FE_INVALID (_SW_INVALID 0x10) recorded, quiet bit of NaN result, fmin(-0.0,NaN) sign, errno unchanged (0) for NaN operands. On x86 (32-bit) d_snan() returned via x87 would be quieted; x64 only.
  */
 #include "tc.h"
 #include <math.h>
@@ -24,8 +24,8 @@ static double d_snan(void) { union { unsigned long long u; double d; } x; x.u = 
 
 
 TC_CASE(snan_numeric) { volatile double s=d_snan(), o=1.0; CHECK_BITS_D(fmax(s,o), 1.0); CHECK_BITS_D(fmin(o,s), 1.0); }
-TC_CASE(snan_invalid_flag) { volatile double s=d_snan(), o=1.0; _clearfp(); (void)fmax(s,o); CHECK(_statusfp() & 0x10); }
-TC_CASE(snan_snan_quiet) { volatile double s=d_snan(); double r=fmax(s,s); CHECK_IS_NAN(r); CHECK(tc_dbits(r) & 0x0008000000000000ULL); }
+TC_CASE(snan_no_invalid_flag) { volatile double s=d_snan(), o=1.0, r; _clearfp(); r = fmax(s,o); (void)r; CHECK_EQ_U(_statusfp() & 0x10, 0); }
+TC_CASE(snan_snan_stays_signalling) { volatile double s=d_snan(); double r=fmax(s,s); CHECK_IS_NAN(r); CHECK_EQ_U(tc_dbits(r) & 0x0008000000000000ULL, 0); }
 TC_CASE(negzero_nan) { volatile double z=-0.0, n=d_nan(); CHECK_BITS_D(fmin(z,n), -0.0); }
 TC_CASE(errno_zero) { volatile double n=d_nan(), o=1.0; errno=0; (void)fmax(n,o); (void)fmin(o,n); (void)fmax(n,n); CHECK_EQ_I(errno,0); }
-int main(void) { tc_begin(); TC_RUN(snan_numeric); TC_RUN(snan_invalid_flag); TC_RUN(snan_snan_quiet); TC_RUN(negzero_nan); TC_RUN(errno_zero); return tc_end(); }
+int main(void) { tc_begin(); TC_RUN(snan_numeric); TC_RUN(snan_no_invalid_flag); TC_RUN(snan_snan_stays_signalling); TC_RUN(negzero_nan); TC_RUN(errno_zero); return tc_end(); }

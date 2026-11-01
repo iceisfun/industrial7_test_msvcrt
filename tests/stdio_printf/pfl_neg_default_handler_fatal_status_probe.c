@@ -26,6 +26,7 @@ int main(void)
 {
     tc_begin();
     if (tc_child_name()) {
+        tc_iph_default();
         _locale_t l = _create_locale(LC_ALL, "C");
         if (l) { pl_printf_l(v_nof, l); _free_locale(l); }
         return 77;

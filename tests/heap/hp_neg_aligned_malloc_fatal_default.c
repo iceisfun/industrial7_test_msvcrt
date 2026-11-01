@@ -34,6 +34,7 @@ int main(void)
     const char *c;
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
+        tc_iph_default();
         void *p;
         v_a = (c[0] == 'b') ? 3 : 16;
         p = _aligned_malloc(v_n, v_a);

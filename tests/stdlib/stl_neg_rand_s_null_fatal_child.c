@@ -45,7 +45,7 @@ int main(void)
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
         volatile unsigned int *volatile p = NULL;
-        if (c[0] == 'n') { rand_s((unsigned int *)p); return 77; }
+        if (c[0] == 'n') { tc_iph_default(); rand_s((unsigned int *)p); return 77; }
         tc_iph_install(); tc_iph_count = 0; errno = 0;
         { errno_t r = rand_s((unsigned int *)p); return (r == EINVAL && errno == EINVAL && tc_iph_count == 1) ? 40 : 41; }
     }

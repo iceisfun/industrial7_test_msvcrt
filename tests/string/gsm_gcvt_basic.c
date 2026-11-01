@@ -5,9 +5,10 @@
  * procs: _gcvt_s
  * crt:   >=90
  * tier:  p0
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _gcvt, _gcvt_s (digits significant digits, trailing zeros suppressed, leading '-' for negatives)
- * note:  Integral values (trailing '.') and exponent digit count are probed in gsm_gcvt_exp_digits_probe.
+ * note:  Integral values (trailing dot) and exponent digit count are probed in gsm_gcvt_exp_digits_probe. Observed on Win10
+ *        22H2 ucrtbase: _gcvt_s(0.0001, 3 digits) gives "1.e-004" (scientific, three exponent digits, bare dot), not "0.0001".
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -28,6 +29,6 @@ TC_CASE(gcvt_s_size_ok)
     char b[32];
     if (!tc_p__gcvt_s) TC_SKIP("not exported");
     v = -2.5; CHECK_EQ_I(tc_p__gcvt_s(b, sizeof b, v, 3), 0); CHECK_STR(b, "-2.5");
-    v = 0.0001; CHECK_EQ_I(tc_p__gcvt_s(b, sizeof b, v, 3), 0); CHECK_STR(b, "0.0001");
+    v = 0.0001; CHECK_EQ_I(tc_p__gcvt_s(b, sizeof b, v, 3), 0); CHECK_STR(b, "1.e-004");
 }
 int main(void) { tc_begin(); TC_LOAD_PROC(_gcvt_s); TC_RUN(trailing_zeros); TC_RUN(rounding); TC_RUN(negative); TC_RUN(gcvt_s_pi); TC_RUN(gcvt_s_size_ok); return tc_end(); }

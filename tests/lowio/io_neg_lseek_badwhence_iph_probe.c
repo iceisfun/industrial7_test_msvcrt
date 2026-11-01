@@ -5,10 +5,12 @@
  * crt:   >=80
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _lseek (origin validation); Parameter Validation
  * note:  PROBE: whether an invalid origin (3, -1) invokes the invalid parameter handler exactly once per call,
  *        in addition to errno=EINVAL / -1 (the latter is asserted in io_neg_lseek_badwhence).
+ *        Win10 22H2 19045 (observed): _lseek/_lseeki64 with origin 3 or -1 return -1 with errno EINVAL but do NOT call the invalid parameter handler (delta 0).
+ *        [unverified] on other CRTs: only ucrtbase 19045 was observed; the expectation is gated with TC_AT_LEAST(140) and the original expectation is kept for older CRTs.
  */
 #include "tc.h"
 #include <io.h>
@@ -31,14 +33,26 @@ TC_CASE(whence3)
 {
     int fd = mk(); int c; CHECK(fd >= 0); if (fd < 0) return;
     c = tc_iph_count; errno = 0;
-    CHECK_EQ_I(_lseek(fd, 0, 3), -1); CHECK_EQ_I(tc_iph_count - c, 1);
+    
+#if TC_AT_LEAST(140)
+CHECK_EQ_I(_lseek(fd, 0, 3), -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count - c, 0);
+#else
+CHECK_EQ_I(_lseek(fd, 0, 3), -1); CHECK_EQ_I(tc_iph_count - c, 1);
+#endif
+
     _close(fd);
 }
 TC_CASE(whence_minus1)
 {
     int fd = mk(); int c; CHECK(fd >= 0); if (fd < 0) return;
     c = tc_iph_count; errno = 0;
-    CHECK_EQ_I(_lseek(fd, 0, -1), -1); CHECK_EQ_I(tc_iph_count - c, 1);
+    
+#if TC_AT_LEAST(140)
+CHECK_EQ_I(_lseek(fd, 0, -1), -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count - c, 0);
+#else
+CHECK_EQ_I(_lseek(fd, 0, -1), -1); CHECK_EQ_I(tc_iph_count - c, 1);
+#endif
+
     _close(fd);
 }
 TC_CASE(i64_variants)
@@ -48,7 +62,11 @@ TC_CASE(i64_variants)
     CHECK_EQ_I(_lseeki64(fd, 0, 3), -1);
     errno = 0;
     CHECK_EQ_I(_lseeki64(fd, 0, -1), -1);
+#if TC_AT_LEAST(140)
+    CHECK_EQ_I(tc_iph_count - c, 0);   /* observed */
+#else
     CHECK_EQ_I(tc_iph_count - c, 2);
+#endif
     _close(fd);
 }
 int main(void)

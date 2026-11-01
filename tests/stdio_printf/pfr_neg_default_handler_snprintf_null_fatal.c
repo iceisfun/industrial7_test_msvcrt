@@ -10,6 +10,7 @@
  * note:  Child-process test. Each fatal child makes ONE bad call; the exit code must not be 77 (reached only if the call returned)
  *        and not 0. snprintf (C99) is only available as an inline/export on ucrtbase and is tested there only. The control
  *        child installs a handler and expects -1 plus one handler call per bad call, exiting 77.
+ *        Win10 22H2 fix: fatal children call tc_iph_default() first (mingw crtexe installs a no-op handler).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -46,6 +47,7 @@ int main(void)
 #endif
             return ok ? 77 : 100 + tc_iph_count;
         }
+        tc_iph_default();
         if (!lstrcmpA(c, "sn_null")) _snprintf(nb, 5, "x");
         else if (!lstrcmpA(c, "snw_null")) _snwprintf(nw, 5, L"x");
         else if (!lstrcmpA(c, "sn_nullfmt")) _snprintf(buf, 5, nf);

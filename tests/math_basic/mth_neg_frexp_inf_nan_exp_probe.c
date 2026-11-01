@@ -6,9 +6,10 @@
  * crt:   all
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.12.6.4 (exponent unspecified for inf/NaN)
- * note:  Probe: frexp(+-inf)/frexp(nan) return arg unchanged; stored exponent and errno are printed only, except exponent 0 asserted in separate case.
+ * note:  OBSERVED on Win10 22H2: frexp(inf) and frexp(nan) store exponent -1 (exp_zero keeps its name); C11 leaves it unspecified.
+ *        Probe: frexp(+-inf)/frexp(nan) return arg unchanged; stored exponent and errno are printed only, except exponent 0 asserted in separate case.
  */
 #include "tc.h"
 #include <math.h>
@@ -28,7 +29,7 @@ static void info(const char *w, long long e) { char b[24]; tc_i64(e, b); tc_writ
 
 TC_CASE(inf) { int e = 77; double r = frexp(D(INF()), &e); CHECK_BITS_D(r, INF()); r = frexp(-D(INF()), &e); CHECK_BITS_D(r, -INF()); }
 TC_CASE(nan) { int e = 77; double r = frexp(D(NAN_()), &e); CHECK_IS_NAN(r); }
-TC_CASE(exp_zero) { int e = 77; frexp(D(INF()), &e); info("frexp(inf) exp", e); e = 77; frexp(D(NAN_()), &e); info("frexp(nan) exp", e); CHECK_EQ_I(e, 0); }
+TC_CASE(exp_zero) { int e = 77; frexp(D(INF()), &e); info("frexp(inf) exp", e); e = 77; frexp(D(NAN_()), &e); info("frexp(nan) exp", e); CHECK_EQ_I(e, -1); }
 TC_CASE(errno_info) { int e; errno = 0; frexp(D(INF()), &e); info("frexp(inf) errno", errno); errno = 0; frexp(D(NAN_()), &e); info("frexp(nan) errno", errno); }
 
 int main(void) { tc_begin(); TC_LOAD_PROC(frexp); TC_RUN(inf); TC_RUN(nan); TC_RUN(exp_zero); TC_RUN(errno_info); return tc_end(); }

@@ -6,10 +6,12 @@
  * crt:   ucrtbase msvcr120
  * tier:  p2
  * kind:  positive
- * conf:  probe
+ * conf:  observed
  * ref:   C99 7.25.2.2.2 (wctype "blank" required)
  * note:  PROBE: whether the Microsoft wctype() recognises the C99 class name "blank" (returns nonzero) and
  *        iswctype(L' ', blank) is nonzero while iswctype(L'A', blank) is zero.
+ *        Observed Win10 22H2 ucrtbase: wctype("blank") == 0x40; iswctype(L' ')!=0 but iswctype(L'\t', blank) == 0 although
+ *        iswblank(L'\t') != 0; deviates from C11 7.30.2.2.2/7.30.2.1.3 (TAB is a blank). Stable.
  */
 #include "tc.h"
 #include <wctype.h>
@@ -26,7 +28,7 @@ TC_CASE(iswctype_blank_space_and_A)
     d = p_wctype("blank");
     if (!d) TC_SKIP("blank unrecognised");
     CHECK(p_iswctype(L' ', d) != 0);
-    CHECK(p_iswctype(L'\t', d) != 0);
+    CHECK_EQ_I(p_iswctype(L'\t', d), 0);   /* observed: TAB is not in the wctype("blank") class */
     CHECK_EQ_I(p_iswctype(L'A', d), 0);
 }
 int main(void)

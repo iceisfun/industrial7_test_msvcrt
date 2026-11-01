@@ -6,10 +6,10 @@
  * crt:   win10
  * tier:  p0
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf type field (%ls/%lc), wcrtomb (EILSEQ when a wide char cannot be converted)
- * note:  PROBES: In the "C" locale a wide char above 0xFF has no narrow mapping, so conversion fails: -1 with errno EILSEQ.
- *        Set via errno, not the invalid-parameter handler. Output written before the failure is not asserted.
+ * note:  Win10 22H2 (observed, "C" locale): %ls of an unconvertible wide char (0x100) fails the call: -1 with EILSEQ. %lc of the same char sets EILSEQ but
+ *        the call still succeeds, dropping the character (result "abyz", 4); deviates from C11 7.21.6.1p14 (an encoding error must give a negative return).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -31,18 +31,19 @@ TC_CASE(ls_unconvertible)
     r = calls(b, "ab%lsyz", (wchar_t *)w);
     CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EILSEQ); CHECK_EQ_I(tc_iph_count, 0);
 }
-TC_CASE(lc_unconvertible)
+TC_CASE(lc_unconvertible_dropped)
 {
     char b[64]; int r; volatile unsigned int wc = 0x0100;
     if (!p_vs) TC_SKIP("not exported");
     errno = 0; tc_iph_count = 0;
     r = calls(b, "ab%lcyz", (wint_t)wc);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EILSEQ); CHECK_EQ_I(tc_iph_count, 0);
+    /* observed on Win10 22H2: unlike %ls (which returns -1), a failed %lc conversion sets EILSEQ but printing continues: the char is dropped and "abyz" (4) is produced */
+    CHECK_EQ_I(r, 4); CHECK_STR(b, "abyz"); CHECK_EQ_I(errno, EILSEQ); CHECK_EQ_I(tc_iph_count, 0);
 }
 int main(void)
 {
     tc_begin(); tc_iph_install();
     p_vs = (vs_t)tc_crt_proc("__stdio_common_vsprintf");
-    TC_RUN(ls_unconvertible); TC_RUN(lc_unconvertible);
+    TC_RUN(ls_unconvertible); TC_RUN(lc_unconvertible_dropped);
     return tc_end();
 }

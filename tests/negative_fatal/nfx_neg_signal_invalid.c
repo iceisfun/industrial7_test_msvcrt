@@ -6,9 +6,11 @@
  * crt:   >=80
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs signal (invalid signal number: SIG_ERR, errno EINVAL, invalid parameter handler)
- * note:  none
+ * note:  OBSERVED on Win10 22H2 (19045): signal(0|-1|9|1000, h) returns SIG_ERR and sets errno EINVAL but does NOT call the
+ *        invalid-parameter handler (count stays 0). The MS docs mention the handler; Windows does not invoke it for these
+ *        numbers. Stable.
  */
 #include "tc.h"
 #include <signal.h>
@@ -23,7 +25,7 @@ static void chk(int s)
     r = signal(v_sig, h);
     CHECK(r == SIG_ERR);
     CHECK_EQ_I(errno, EINVAL);
-    CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(tc_iph_count, 0);   /* observed: no handler call, just SIG_ERR + EINVAL */
 }
 TC_CASE(zero)     { chk(0); }
 TC_CASE(minus1)   { chk(-1); }

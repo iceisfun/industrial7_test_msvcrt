@@ -8,8 +8,12 @@
  * kind:  negative
  * conf:  probe
  * ref:   MS docs signal (SIGFPE), _XcptFilter
- * note:  Probes: the INT_MIN / -1 hardware fault (STATUS_INTEGER_OVERFLOW on x64 idiv) is delivered as SIGFPE to the signal() handler.
- *        Toolchain note: test exes are built with mingw-w64, whose CRT startup (not the Microsoft CRT's _XcptFilter) installs the exception-to-signal translation; the CRT under test only stores/returns the signal() handler. Whether the mingw translation maps INT_OVERFLOW to SIGFPE is unverified.
+ * note:  PROBE: the INT_MIN / -1 hardware fault (STATUS_INTEGER_OVERFLOW on x64 idiv) is delivered as SIGFPE to the signal()
+ *        handler. Win10 22H2 19045 with the mingw-w64 test exe: the first-chance exception is 0xC0000095 but the child never
+ *        terminates (spins until the harness kill, class E); divide-by-zero with the same signal(SIGFPE) handler works (exit
+ *        62) and an unhandled-exception filter calling ucrtbase _seh_filter_exe did not help for INT_MIN/-1. Now behind
+ *        TC_HAZARD (skipped unless TC_HAZARD=1). Missing datum: the same test from an MSVC-built exe (its startup SEH filter)
+ *        or a debugger trace of where the child spins.
  */
 #include "tc.h"
 #include <signal.h>
@@ -18,7 +22,7 @@
 static void __cdecl h(int s) { (void)s; ExitProcess(62); }
 static volatile int v_a, v_b, v_r;
 
-TC_CASE(int_min)  { DWORD c = 0; CHECK(tc_spawn_self("min", &c, 20000)); CHECK_EQ_U(c, 62); }
+TC_CASE(int_min)  { DWORD c = 0; TC_HAZARD("INT_MIN / -1 faults (0xC0000095) and the child spins until the 20 s kill timeout on Win10 22H2 19045"); CHECK(tc_spawn_self("min", &c, 20000)); CHECK_EQ_U(c, 62); }
 
 int main(void)
 {

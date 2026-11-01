@@ -3,12 +3,14 @@
  * area:  stdio_printf
  * kind:  negative
  * funcs: _snprintf_s
- * crt:   >=120
+ * crt:   ucrtbase
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _snprintf_s (count >= buffer size without _TRUNCATE is an invalid parameter; truncation under _TRUNCATE)
  * note:  PROBES: (1) _snprintf_s(b,4,4,"%d",12345) (count == size, no _TRUNCATE, output too long) returns -1, calls the invalid parameter
- *        handler once, sets errno ERANGE and leaves b[0]==0; (2) with _TRUNCATE truncation sets errno ERANGE and does NOT call the handler.
+ *        handler once, sets errno ERANGE and leaves b[0]==0; (2) with _TRUNCATE truncation returns -1, does NOT call the handler and (observed Win10 22H2, corrects old guess ERANGE) leaves errno untouched (0).
+ *        Raw evidence (baseline): TC FAIL ...::truncate_errno_no_handler errno == ERANGE got=0 want=34 (count_eq_size_overflow still passes with ERANGE).
+ *        crt narrowed to ucrtbase: the observed behaviour was measured on Win10 22H2 ucrtbase only (older CRTs [unverified]).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -24,6 +26,6 @@ TC_CASE(truncate_errno_no_handler)
 {
     char b[8]; const char * volatile f = "%d"; int n; tc_iph_count = 0; errno = 0;
     n = _snprintf_s(b, 4, _TRUNCATE, f, 12345);
-    CHECK_EQ_I(n, -1); CHECK_EQ_I(tc_iph_count, 0); CHECK_EQ_I(errno, ERANGE); CHECK_STR(b, "123");
+    CHECK_EQ_I(n, -1); CHECK_EQ_I(tc_iph_count, 0); CHECK_EQ_I(errno, 0); CHECK_STR(b, "123");   /* observed: errno NOT set on _TRUNCATE truncation */
 }
 int main(void) { tc_begin(); tc_iph_install(); TC_RUN(count_eq_size_overflow); TC_RUN(truncate_errno_no_handler); return tc_end(); }

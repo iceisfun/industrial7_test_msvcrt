@@ -5,10 +5,11 @@
  * funcs: _swab
  * crt:   >=140
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _swab "Parameter validation"
  * note:  PROBES whether _swab validates NULL pointers when n == 0. Expectation: the UCRT validates pointers only when n > 0
  *        (n == 0 with NULL: no iph); n > 0 with NULL: iph once, errno EINVAL. Real Windows is ground truth.
+ *        Win10 22H2 19045 (observed): _swab validates both pointers before looking at n, so n == 0 with a NULL pointer invokes the handler once.
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -21,9 +22,9 @@ TC_CASE(zero_valid_control)
     tc_iph_count = 0; errno = 0; _swab(s, d, 0);
     CHECK_EQ_I(tc_iph_count, 0); CHECK_EQ_I(d[0], 'x'); CHECK_EQ_I(d[1], 'y');
 }
-TC_CASE(zero_null_src)  { char d[2] = { 'x', 'y' }; char *volatile p = NULL; tc_iph_count = 0; errno = 0; _swab(p, d, 0); CHECK_EQ_I(tc_iph_count, 0); CHECK_EQ_I(d[0], 'x'); }
-TC_CASE(zero_null_dest) { char s[2] = { 'a', 'b' }; char *volatile p = NULL; tc_iph_count = 0; errno = 0; _swab(s, p, 0); CHECK_EQ_I(tc_iph_count, 0); }
-TC_CASE(zero_both_null) { char *volatile p = NULL; tc_iph_count = 0; errno = 0; _swab(p, p, 0); CHECK_EQ_I(tc_iph_count, 0); }
+TC_CASE(zero_null_src)  { char d[2] = { 'x', 'y' }; char *volatile p = NULL; tc_iph_count = 0; errno = 0; _swab(p, d, 0); CHECK_EQ_I(tc_iph_count, 1); CHECK_EQ_I(d[0], 'x'); }
+TC_CASE(zero_null_dest) { char s[2] = { 'a', 'b' }; char *volatile p = NULL; tc_iph_count = 0; errno = 0; _swab(s, p, 0); CHECK_EQ_I(tc_iph_count, 1); }
+TC_CASE(zero_both_null) { char *volatile p = NULL; tc_iph_count = 0; errno = 0; _swab(p, p, 0); CHECK_EQ_I(tc_iph_count, 1); }
 TC_CASE(two_null_combos)
 {
     char s[2] = { 'a', 'b' }, d[2] = { 'x', 'y' }; char *volatile p = NULL;

@@ -9,6 +9,8 @@
  * ref:   MS docs Parameter validation: with the default invalid-parameter handler the process terminates
  * note:  The exact termination status is deliberately not asserted here (docs promise only termination; see
  *        err_neg_default_handler_fatal for the status probe). Fatal paths run in child processes. Exit code must be non-zero and not 77 (77 = call returned).
+ *        HARNESS FIX (class F, Win10 22H2): mingw crt2.o installs a no-op invalid-parameter handler at startup, so the child survived (exit 77 instead of
+ *        0xC0000409); the child now calls tc_iph_default() (tc.h) to restore the CRT default before the call under test.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -27,6 +29,7 @@ int main(void)
     tc_begin();
     if ((c = tc_child_name()) != NULL) {
         FILE *volatile f; const char *volatile nm = NULL; const char *volatile md = "r";
+        tc_iph_default();  /* undo mingw startup no-op handler */
         if (c[0] == 'a') f = fopen(nm, md); else f = fopen("x.tmp", NULL);
         (void)f;
         return 77;

@@ -5,10 +5,10 @@
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _putenv_s
- * note:  PROBE: _putenv_s with a varname containing '=' is rejected: returns EINVAL, errno EINVAL, invalid-parameter handler runs once,
- *        and the variable is not created. Believed true from the CRT's own validation but not spelled out in the docs.
+ * note:  OBSERVED on Win10 22H2 ucrtbase: _putenv_s("TC_PN2=x", "v") is NOT rejected (returns 0, errno 0, no invalid-parameter
+ *        call); the entry is stored as "TC_PN2=x=v" so getenv("TC_PN2") yields "x=v". The old EINVAL expectation was wrong.
  */
 #include "tc.h"
 #include <stdlib.h>
@@ -18,8 +18,9 @@ TC_CASE(name_has_equals)
 {
     int before = tc_iph_count; errno_t e;
     errno = 0; e = _putenv_s("TC_PN2=x", "v");
-    CHECK_EQ_I(e, EINVAL); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count - before, 1);
-    CHECK(getenv("TC_PN2") == NULL);
+    CHECK_EQ_I(e, 0); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count - before, 0);
+    CHECK_STR(getenv("TC_PN2"), "x=v");   /* observed: accepted, stored as "TC_PN2=x=v" and found by prefix */
+    _putenv("TC_PN2=");
 }
 int main(void)
 {

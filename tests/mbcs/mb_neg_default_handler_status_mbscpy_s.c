@@ -6,10 +6,12 @@
  * procs: _mbscpy_s
  * crt:   >=140
  * tier:  p0
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs "Parameter validation"
  * note:  PROBE: the exact termination status of the ucrtbase default invalid-parameter path for _mbscpy_s overflow.
  *        Expected STATUS_STACK_BUFFER_OVERRUN (0xC0000409, fast fail). Docs only promise termination.
+ *        Observed Win10 22H2 ucrtbase: exit status 0xC0000409 once the child restores the CRT default handler with tc_iph_default()
+ *        (the mingw startup code otherwise leaves a no-op handler and the call returns). Stable.
  */
 #include "tc.h"
 
@@ -27,6 +29,7 @@ int main(void)
     tc_begin();
     p_mbscpy_s = (mbscpy_s_t)tc_crt_proc("_mbscpy_s");
     if (tc_child_name()) {
+        tc_iph_default();   /* mingw startup installs a no-op handler; restore the CRT default (fatal) */
         unsigned char buf[2]; static const unsigned char *volatile longs = (const unsigned char *)"toolong";
         if (!p_mbscpy_s) return 78;
         p_mbscpy_s(buf, 2, longs);

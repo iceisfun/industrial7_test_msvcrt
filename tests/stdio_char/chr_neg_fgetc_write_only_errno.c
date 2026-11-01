@@ -5,9 +5,11 @@
  * funcs: fgetc fopen fclose
  * crt:   all
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs fgetc, errno
  * note:  PROBE: errno is EBADF after fgetc on a write-only FILE.
+ *        OBSERVED (Win10 22H2, class A): fgetc on a "w" stream returns EOF, sets ferror, leaves errno == 0 and does not call the invalid-parameter handler
+ *        (raw: errno == EBADF got=0 want=9).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -35,7 +37,8 @@ TC_CASE(write_only)
     f = fopen(FN, "w"); CHECK(f != NULL); if (!f) return;
     errno = 0;
     CHECK_EQ_I(fgetc(f), EOF);
-    CHECK_EQ_I(errno, EBADF);
+    CHECK_EQ_I(errno, 0);       /* observed: errno is NOT set; only the error indicator is */
+    CHECK(ferror(f) != 0);
     fclose(f);
 }
 int main(void) { tc_begin(); tc_iph_install(); TC_RUN(write_only); DeleteFileA(FN); return tc_end(); }

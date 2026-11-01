@@ -5,11 +5,10 @@
  * funcs: sprintf _snprintf
  * crt:   ucrtbase
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs printf format specification (a specification must end in a conversion character)
- * note:  PROBE: a format string that ends in the middle of a specification ("%l", "%ll", "%5", "%-.", "%h", "%+") is expected
- *        to be an invalid format: -1, EINVAL, one invalid-parameter handler call. Each format is its own case.
- *        crt narrowed to ucrtbase: pre-UCRT CRTs may print unparsable specs literally (see pfv_neg_probe_invalid_conv_char_pre140).
+ * note:  Observed on Windows 10 22H2 ucrtbase: a non-secure sprintf/_snprintf format that ends inside a specification ("%l", "%ll", "%5", "%-.", "%h", "%+")
+ *        is silently accepted: returns 0 (nothing printed), errno 0, no handler call.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -21,7 +20,7 @@ static void chk(const char *f)
 {
     char b[32]; int r; errno = 0; tc_iph_count = 0;
     r = sprintf(b, f);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 0); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(pct_l) { chk(f_l); }
 TC_CASE(pct_ll) { chk(f_ll); }
@@ -33,7 +32,7 @@ TC_CASE(snprintf_pct_ll)
 {
     char b[32]; int r; errno = 0; tc_iph_count = 0;
     r = _snprintf(b, sizeof b, f_ll);
-    CHECK_EQ_I(r, -1); CHECK_EQ_I(errno, EINVAL); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(r, 0); CHECK_EQ_I(errno, 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 int main(void)
 {

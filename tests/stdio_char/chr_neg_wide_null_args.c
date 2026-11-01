@@ -5,9 +5,10 @@
  * funcs: fgetws fputws fopen fclose
  * crt:   >=80
  * tier:  p0
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs fgetws, fputws; parameter validation
  * note:  NULL buffer / NULL string with a valid stream.
+ *        OBSERVED (Win10 22H2, class A): fputws returns int; failure is EOF (-1), not (int)WEOF (65535) (raw: got=-1 want=65535). errno/handler asserts unchanged.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -46,7 +47,7 @@ TC_CASE(fputws_null_str)
     put_file("", 0);
     f = fopen(FN, "w"); CHECK(f != NULL); if (!f) return;
     tc_iph_count = 0; errno = 0;
-    CHECK_EQ_I(fputws(s, f), (int)WEOF);
+    CHECK_EQ_I(fputws(s, f), EOF);  /* fputws returns int: EOF (-1), not (int)WEOF (65535) */
     CHECK_EQ_I(errno, EINVAL);
     CHECK_EQ_I(tc_iph_count, 1);
     fclose(f);

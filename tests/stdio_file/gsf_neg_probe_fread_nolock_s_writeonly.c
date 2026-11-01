@@ -5,9 +5,10 @@
  * crt:   >=80
  * tier:  p1
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs fread_s
  * note:  PROBE: errno value (EBADF) and whether the invalid-parameter handler runs when reading from a write-only stream. Reported values are asserted: ret 0, ferror set, errno EBADF; iph count expected 0.
+ *        OBSERVED (Win10 22H2, class A): _fread_nolock_s on a "wb" stream returns 0, sets ferror, leaves errno 0 (raw: errno == EBADF got=0 want=9).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -40,7 +41,7 @@ TC_CASE(wronly_errno_iph)
     CHECK(tc_iph_install());
     tc_iph_count = 0; errno = 0; vsz = 1; vcnt = 4;
     CHECK_EQ_U(_fread_nolock_s(b, sizeof b, vsz, vcnt, fp), 0);
-    CHECK_EQ_I(errno, EBADF);
+    CHECK_EQ_I(errno, 0);  /* observed Win10 22H2: only the stream error flag is set; errno untouched */
     CHECK_EQ_I(tc_iph_count, 0);
     fclose(fp); remove(fn);
 }

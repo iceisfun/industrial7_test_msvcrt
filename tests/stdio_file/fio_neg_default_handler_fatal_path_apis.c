@@ -9,6 +9,9 @@
  * conf:  documented
  * ref:   MS docs "Parameter validation"; docs for rename, fsetpos, freopen, _fseek/_fseeki64, tmpnam_s
  * note:  Each bad call runs in a child process; without a handler the process must terminate abnormally.
+ *        TRIAGE win1093[34])?#934): (class F) the child now runs with the CRT default invalid-parameter handler (tc.h tc_begin restores it; mingw startup had installed a silent one, so
+ *        children returned 77). (class A) c_rename: ucrtbase 10.0.19045 rename(NULL, x) does not validate and does not terminate (child exits 77, observed), consistent with
+ *        fio_neg_rename_null_args (errno ENOENT, no handler call). The other four cases terminate as documented.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -40,7 +43,17 @@ static void chk(const char *name)
     CHECK(code != 77);
     CHECK(code != 78); CHECK(code != 79);
 }
-TC_CASE(c_rename)   { chk("rename"); }
+TC_CASE(c_rename)
+{
+#if TC_AT_LEAST(140)
+    /* observed ucrtbase 10.0.19045: rename(NULL, "b") does not invoke the invalid-parameter handler; it fails with ENOENT and returns,
+     * so the child runs to its 'returned' exit code 77 instead of terminating */
+    DWORD code = 0; int ran = tc_spawn_self("rename", &code, 20000);
+    CHECK(ran); CHECK_EQ_U(code, 77);
+#else
+    chk("rename");
+#endif
+}
 TC_CASE(c_fsetpos)  { chk("fsetpos"); }
 TC_CASE(c_freopen)  { chk("freopen"); }
 TC_CASE(c_fseeki64) { chk("fseeki64"); }
@@ -50,6 +63,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
+    if (tc_child_name()) tc_iph_default();
     if ((c = tc_child_name()) != NULL) return child_main(c);
     TC_RUN(c_rename); TC_RUN(c_fsetpos); TC_RUN(c_freopen); TC_RUN(c_fseeki64); TC_RUN(c_tmpnam_s);
     DeleteFileA(NAME);

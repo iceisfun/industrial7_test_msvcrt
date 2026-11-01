@@ -3,7 +3,7 @@
  * area:  negative_fatal
  * kind:  negative
  * funcs: exit  _exit
- * procs: _onexit
+ * procs: _onexit _crt_atexit
  * crt:   all
  * tier:  p1
  * conf:  probe
@@ -15,6 +15,13 @@
 #include <errno.h>
 
 TC_DECL_PROC(_onexit_t, _onexit, (_onexit_t));
+#if TC_CRT_VER >= 140
+/* ucrtbase does NOT export _onexit (class D: the old GetProcAddress("_onexit") gave NULL and every call crashed with 0xC0000005);
+ * the toolchain's static _onexit registers through the exported _crt_atexit. Older CRTs still export it. */
+#define TC_ONEXIT(f) _onexit(f)
+#else
+#define TC_ONEXIT(f) tc_p__onexit(f)
+#endif
 
 
 static int __cdecl h_exit7(void) { exit(7); return 0; }
@@ -37,10 +44,10 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    TC_LOAD_PROC(_onexit);
+    TC_LOAD_PROC(_onexit);   /* NULL on ucrtbase, unused there */
     if ((c = tc_child_name()) != NULL) {
-        if (c[0] == 't') { tc_p__onexit(h_u8); }
-        tc_p__onexit(h_exit7);
+        if (c[0] == 't') { TC_ONEXIT(h_u8); }
+        TC_ONEXIT(h_exit7);
         exit(0);
     }
     TC_RUN(nested_exit_terminates); TC_RUN(nested_exit_other_handlers_recorded);

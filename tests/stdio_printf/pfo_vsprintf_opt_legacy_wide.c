@@ -5,9 +5,12 @@
  * crt:   ucrtbase
  * tier:  p0
  * kind:  positive
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs printf type field characters (%s %S %c %C %hs %ls %ws); legacy_stdio_wide_specifiers.lib
- * note:  options 0x4 flips the meaning of %s/%S/%c/%C in the wide functions only.
+ * note:  OBSERVED (Win10 22H2 x64 (19045) ucrtbase.dll observed, raw: "wide_default wb == L\"wid|nar\" mismatch", "wide_legacy ... mismatch"; zzp_probe2 "vw0 s|S (narrow,wide): r=7
+ *        w=nar|wid", "vw4 s|S (wide,narrow): r=7 w=wid|nar"): the direction of option bit 0x4 was inverted in the test. Options 0 = ISO wide specifiers
+ *        (%s narrow, %S wide) and options 4 (_CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS) = MS legacy (%s wide, %S narrow), still only in the wide
+ *        functions. Test cases narrow_*, wide_c, explicit_forms unchanged. Matches C11 7.29.2.1 (%s in a wide printf takes char*) for options 0. Stable.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -36,13 +39,13 @@ TC_CASE(narrow_opt4_unchanged)
 }
 TC_CASE(wide_default)
 {
-    vw(0, wb, 64, L"%s|%S", ws, ns);
-    CHECK_WSTR(wb, L"wid|nar");
+    vw(0, wb, 64, L"%s|%S", ns, ws);    /* options 0: ISO - %s narrow, %S wide (observed) */
+    CHECK_WSTR(wb, L"nar|wid");
 }
 TC_CASE(wide_legacy)
 {
-    vw(4, wb, 64, L"%s|%S", ns, ws);
-    CHECK_WSTR(wb, L"nar|wid");
+    vw(4, wb, 64, L"%s|%S", ws, ns);    /* options 4 (LEGACY_WIDE_SPECIFIERS): MS legacy - %s wide, %S narrow (observed) */
+    CHECK_WSTR(wb, L"wid|nar");
 }
 TC_CASE(wide_c)
 {

@@ -6,11 +6,12 @@
  * procs: _gcvt_s _ecvt_s _fcvt_s
  * crt:   >=90
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _gcvt_s / _ecvt_s / _fcvt_s
- * note:  Probes: (1) _gcvt_s with digits >= size fails (nonzero, handler invoked; the exact code EINVAL vs ERANGE is not asserted) and buffer[0]=='\0' (separate case); (2) _ecvt_s with count too small a buffer leaves buffer[0]=='\0';
- *        (3) _ecvt_s with negative count -> EINVAL; (4) _fcvt_s with negative count is accepted (returns 0, handler not called).
- *        Each guess in its own case.
+ * note:  Probes: (1) _gcvt_s with digits >= size fails (nonzero, handler invoked) and buffer[0]==0 (separate case); (2) _ecvt_s
+ *        with count too small a buffer leaves buffer[0]==0; (3) _ecvt_s with negative count: OBSERVED on Win10 22H2 ucrtbase it
+ *        returns 0 with no invalid-parameter call (the old EINVAL expectation was wrong); (4) _fcvt_s with negative count is
+ *        accepted (returns 0, handler not called).
  */
 #include "tc.h"
 #define EINVAL_ 22
@@ -40,7 +41,7 @@ TC_CASE(ecvt_negative_count)
 {
     char b[16]; int d, s;
     if (!tc_p__ecvt_s) TC_SKIP("missing"); tc_iph_count = 0;
-    CHECK_EQ_I(tc_p__ecvt_s(b, sizeof b, 123.456, -1, &d, &s), EINVAL_); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK_EQ_I(tc_p__ecvt_s(b, sizeof b, 123.456, -1, &d, &s), 0); CHECK_EQ_I(tc_iph_count, 0);
 }
 TC_CASE(fcvt_negative_count)
 {

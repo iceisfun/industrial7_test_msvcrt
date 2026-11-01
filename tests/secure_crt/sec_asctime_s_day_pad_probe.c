@@ -5,9 +5,11 @@
  * procs: asctime_s _gmtime64_s
  * crt:   ucrtbase msvcr120 msvcr110 msvcr100 msvcr90
  * tier:  p1
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs asctime_s: 26-character fixed-format string "Www Mmm dd hh:mm:ss yyyy\n"; buffer must hold at least 26 chars
- * note:  Probes only the padding of a single-digit day of month: zero ("Jan 01", as in the MS docs asctime example "Wed Jan 02 02:03:55 1980") vs space ("Jan  1", the ISO C asctime format).
+ * note:  OBSERVED on Win10 22H2 (19045): asctime_s pads a single-digit day with a SPACE ("Thu Jan  1 00:00:00 1970\n"; day 11
+ *        prints "Jan 11"), matching ISO C asctime, not the zero-padded form in the MS docs example. Deterministic (gmtime-based
+ *        input, no time zone).
  */
 #include "tc.h"
 #include <time.h>
@@ -21,7 +23,7 @@ TC_CASE(epoch_Thu_Jan_01_1970)
     struct tm t; char b[26]; volatile __int64 v = 0;
     CHECK_EQ_I(p_gm(&t, (const __int64 *)&v), 0);
     CHECK_EQ_I(p_asc(b, 26, &t), 0);
-    CHECK_STR(b, "Thu Jan 01 00:00:00 1970\n");   /* MS docs example "Wed Jan 02 02:03:55 1980": day is zero padded */
+    CHECK_STR(b, "Thu Jan  1 00:00:00 1970\n");   /* observed: space padded, as ISO C 7.27.3.1 (the MS docs example text is not what the ucrt prints) */
 }
 int main(void)
 {

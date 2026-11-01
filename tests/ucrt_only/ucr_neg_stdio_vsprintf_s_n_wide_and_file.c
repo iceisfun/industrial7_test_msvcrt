@@ -6,9 +6,12 @@
  * crt:   win10
  * tier:  p0
  * kind:  negative
- * conf:  documented
+ * conf:  observed
  * ref:   MS docs _set_printf_count_output (%n disabled by default), printf format specification (%n)
  * note:  temp file tc_ucr_neg_stdio_vsprintf_s_n_wide_and_file_*.tmp. The enabled case restores the setting to 0.
+ * note:  OBSERVED (Win10 22H2 19045; raw "r == 4 got=-1", "t == 2 got=-1", "tc_iph_count == 0 got=1" in enabled_all): __stdio_common_vswprintf_s rejects %n even
+ *        after _set_printf_count_output(1) (the _s variants never support %n). The enabled-%n expectation moved to the non-_s __stdio_common_vswprintf (verified on the
+ *        reference in 4 runs); the _s variant asserts the rejection. Class A.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -19,10 +22,12 @@
 typedef int (__cdecl *vws_t)(unsigned long long, wchar_t *, size_t, const wchar_t *, void *, va_list);
 typedef int (__cdecl *vf_t)(unsigned long long, FILE *, const char *, void *, va_list);
 typedef int (__cdecl *vfw_t)(unsigned long long, FILE *, const wchar_t *, void *, va_list);
-static vws_t p_vwss; static vf_t p_vf; static vfw_t p_vfw;
+static vws_t p_vwss, p_vws; static vf_t p_vf; static vfw_t p_vfw;
 #define TMP "tc_ucr_neg_stdio_vsprintf_s_n_wide_and_file_a.tmp"
 static int callws(wchar_t *b, const wchar_t *fmt, ...)
 { va_list ap; int r; va_start(ap, fmt); r = p_vwss(0, b, 64, fmt, NULL, ap); va_end(ap); return r; }
+static int callw(wchar_t *b, const wchar_t *fmt, ...)
+{ va_list ap; int r; va_start(ap, fmt); r = p_vws(0, b, 64, fmt, NULL, ap); va_end(ap); return r; }
 static int callf(FILE *f, const char *fmt, ...)
 { va_list ap; int r; va_start(ap, fmt); r = p_vf(0, f, fmt, NULL, ap); va_end(ap); return r; }
 static int callfw(FILE *f, const wchar_t *fmt, ...)
@@ -59,11 +64,14 @@ TC_CASE(filew_disabled)
 TC_CASE(enabled_all)
 {
     wchar_t b[64]; FILE *f; volatile int t = -1; int r;
-    if (!p_vwss || !p_vf || !p_vfw) TC_SKIP("not exported");
+    if (!p_vwss || !p_vws || !p_vf || !p_vfw) TC_SKIP("not exported");
     CHECK_EQ_I(_set_printf_count_output(1), 0);
     tc_iph_count = 0;
-    r = callws(b, L"ab%ncd", (int *)&t);
+    r = callw(b, L"ab%ncd", (int *)&t);   /* non-_s variant honours %n once enabled */
     CHECK_EQ_I(r, 4); CHECK_EQ_I(t, 2); CHECK_WSTR(b, L"abcd");
+    /* observed Win10 22H2: the _s variant keeps rejecting %n even with _set_printf_count_output(1): -1, handler once, target untouched */
+    t = 0x5a5a; r = callws(b, L"ab%ncd", (int *)&t);
+    CHECK_EQ_I(r, -1); CHECK_EQ_I(t, 0x5a5a); CHECK_EQ_I(tc_iph_count, 1); tc_iph_count = 0;
     f = fopen(TMP, "wb"); CHECK(f != NULL);
     if (f) {
         t = -1; r = callf(f, "abc%nd", (int *)&t); CHECK_EQ_I(r, 4); CHECK_EQ_I(t, 3);
@@ -79,6 +87,7 @@ int main(void)
 {
     tc_begin(); tc_iph_install();
     p_vwss = (vws_t)tc_crt_proc("__stdio_common_vswprintf_s");
+    p_vws = (vws_t)tc_crt_proc("__stdio_common_vswprintf");
     p_vf = (vf_t)tc_crt_proc("__stdio_common_vfprintf");
     p_vfw = (vfw_t)tc_crt_proc("__stdio_common_vfwprintf");
     TC_RUN(wide_disabled); TC_RUN(file_disabled); TC_RUN(filew_disabled); TC_RUN(enabled_all);

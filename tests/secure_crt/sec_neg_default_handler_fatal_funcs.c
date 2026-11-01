@@ -22,6 +22,7 @@ static int cmp(void *c, const void *a, const void *b) { (void)c; (void)a; (void)
 static int child_main(const char *n)
 {
     char d[8] = "ab", e[8]; int arr[4] = {3, 1, 2, 0}; size_t rs; FILE *f;
+    tc_iph_default();
     if (tc_strequ(n, "strcpy_s")) strcpy_s(d, v0, "x");
     else if (tc_strequ(n, "strcat_s")) strcat_s(NULL, v8, "x");
     else if (tc_strequ(n, "memcpy_s")) memcpy_s(d, v8, "0123456789abcdef", 16);

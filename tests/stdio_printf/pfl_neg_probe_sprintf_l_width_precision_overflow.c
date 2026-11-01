@@ -7,8 +7,8 @@
  * kind:  negative
  * conf:  probe
  * ref:   MS docs printf width specification (width is a nonnegative decimal integer)
- * note:  PROBE: a width or precision literal that does not fit in int (2147483648, 99999999999) is treated by ucrt as an
- *        invalid format (args are ints so a lenient parse cannot crash): invalid-parameter handler runs once, errno == EINVAL, return -1. All uses go through _snprintf_l
+ * note:  OBSERVED Win10 22H2 19045 ucrtbase (run twice): a width or precision literal that does not fit in int (2147483648, 99999999999) makes _snprintf_l fail with
+ *        return -1, errno == ERANGE (34), NO invalid-parameter handler call, buffer[0] == 0 (old guess EINVAL + handler was wrong). All uses go through _snprintf_l
  *        with a 16-byte count so a lenient implementation cannot overrun. Only the no-overrun guard and the
  *        subsequent valid width-5 call are expected to hold under any behaviour.
  */
@@ -30,7 +30,7 @@ static void overflow(const char *fmt, int expect_probe)
     v_fmt = fmt; tc_iph_count = 0; errno = 0;
     r = _snprintf_l(b, 16, (const char *)v_fmt, l, 1, "abc");
     for (i = 16; i < 32; i++) CHECK_EQ_I(b[i], 'G');
-    if (expect_probe) { CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 1); CHECK_EQ_I(errno, EINVAL); }
+    if (expect_probe) { CHECK_EQ_I(r, -1); CHECK_EQ_I(tc_iph_count, 0); CHECK_EQ_I(errno, ERANGE); CHECK_EQ_I(b[0], 0); }
     _free_locale(l);
 }
 TC_CASE(width_2147483648) { overflow("%2147483648d", 1); }

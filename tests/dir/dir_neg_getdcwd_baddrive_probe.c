@@ -5,11 +5,11 @@
  * crt:   >=80
  * tier:  p2
  * kind:  negative
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs _getdcwd (drive range 0..26)
- * note:  Probes errno (EACCES expected) and iph count (1 expected) for out-of-range drive numbers -1 and 27. Separate cases probe an
- *        unused but syntactically valid drive letter: MS docs say an unavailable drive invokes the invalid parameter handler
- *        (CRT checks drive type), so NULL and handler count 1 are expected; unsure, hence probe.
+ * note:  Probes errno (EACCES) and iph count for out-of-range drive numbers -1 and 27. OBSERVED on Win10 22H2 ucrtbase:
+ *        NULL/EACCES and the invalid-parameter handler fires TWICE per call (old expectation: once). Separate cases probe an
+ *        unused but syntactically valid drive letter (NULL and handler count 1).
  */
 #include "tc.h"
 #include <direct.h>
@@ -23,21 +23,21 @@ TC_CASE(drive27)
     char buf[MAX_PATH]; char *p;
     if (!tc_iph_install()) TC_SKIP("no iph");
     tc_iph_count = 0; errno = 0; p = _getdcwd(v_27, buf, MAX_PATH);
-    CHECK(p == NULL); CHECK_EQ_I(errno, EACCES); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK(p == NULL); CHECK_EQ_I(errno, EACCES); CHECK_EQ_I(tc_iph_count, 2);
 }
 TC_CASE(drive_minus1)
 {
     char buf[MAX_PATH]; char *p;
     if (!tc_iph_install()) TC_SKIP("no iph");
     tc_iph_count = 0; errno = 0; p = _getdcwd(v_m1, buf, MAX_PATH);
-    CHECK(p == NULL); CHECK_EQ_I(errno, EACCES); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK(p == NULL); CHECK_EQ_I(errno, EACCES); CHECK_EQ_I(tc_iph_count, 2);
 }
 TC_CASE(wide_drive27)
 {
     wchar_t buf[MAX_PATH]; wchar_t *p;
     if (!tc_iph_install()) TC_SKIP("no iph");
     tc_iph_count = 0; errno = 0; p = _wgetdcwd(v_27, buf, MAX_PATH);
-    CHECK(p == NULL); CHECK_EQ_I(errno, EACCES); CHECK_EQ_I(tc_iph_count, 1);
+    CHECK(p == NULL); CHECK_EQ_I(errno, EACCES); CHECK_EQ_I(tc_iph_count, 2);
 }
 static int free_letter(void)
 {

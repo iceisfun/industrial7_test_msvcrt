@@ -33,7 +33,7 @@ int main(void)
 {
     const char *c;
     tc_begin();
-    if ((c = tc_child_name()) != NULL) { char buf[16]; _getcwd(buf, v_zero); return 77; }
+    if ((c = tc_child_name()) != NULL) { char buf[16]; tc_iph_default(); _getcwd(buf, v_zero); return 77; }
     TC_RUN(child_terminates); TC_RUN(probe_exact_code);
     return tc_end();
 }

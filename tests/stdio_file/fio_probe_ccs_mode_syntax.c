@@ -4,11 +4,13 @@
  * funcs: fopen fclose fputwc
  * crt:   >=80
  * tier:  p2
- * conf:  probe
+ * conf:  observed
  * ref:   MS docs fopen (ccs syntax is documented only as "w, ccs=UNICODE")
  * note:  PROBE: (1) mode string with no space after the comma ("w,ccs=UNICODE") is accepted and behaves like
  *        "w, ccs=UNICODE"; (2) "wb, ccs=UTF-8" (explicit b with ccs) still writes the UTF-8 BOM.
  *        Neither form is documented.
+ *        OBSERVED (Win10 22H2, class A): "w, ccs=UTF-8" writes the 3-byte BOM at open (new case w_with_ccs keeps that original expectation); "wb, ccs=UTF-8" writes
+ *        NOTHING (0 bytes; binary mode overrides ccs; a later fputwc(0x4E2D) puts raw 2D 4E). Raw: rawread(...) == 3 got=0.
  */
 #include "tc.h"
 #define TC_S2(x) #x
@@ -35,13 +37,21 @@ TC_CASE(no_space_after_comma)
     CHECK_EQ_U(b[3], 0x4E); CHECK_EQ_U(b[4], 0x5A); CHECK_EQ_U(b[5], 0);
     DeleteFileA(NAME);
 }
+TC_CASE(w_with_ccs)
+{
+    unsigned char b[16] = {0}; FILE *f = fopen(NAME, "w, ccs=UTF-8");
+    CHECK(f != NULL); if (!f) return;
+    fclose(f);
+    CHECK_EQ_I(rawread(NAME, b, 16), 3);   /* text mode + ccs=UTF-8 writes the BOM at open */
+    CHECK_EQ_U(b[0], 0xEF); CHECK_EQ_U(b[1], 0xBB); CHECK_EQ_U(b[2], 0xBF);
+    DeleteFileA(NAME);
+}
 TC_CASE(wb_with_ccs)
 {
     unsigned char b[16] = {0}; FILE *f = fopen(NAME, "wb, ccs=UTF-8");
     CHECK(f != NULL); if (!f) return;
     fclose(f);
-    CHECK_EQ_I(rawread(NAME, b, 16), 3);
-    CHECK_EQ_U(b[0], 0xEF); CHECK_EQ_U(b[1], 0xBB); CHECK_EQ_U(b[2], 0xBF);
+    CHECK_EQ_I(rawread(NAME, b, 16), 0);   /* observed: explicit b wins over ccs: binary, no BOM */
     DeleteFileA(NAME);
 }
-int main(void) { tc_begin(); DeleteFileA(NAME); TC_RUN(no_space_after_comma); TC_RUN(wb_with_ccs); return tc_end(); }
+int main(void) { tc_begin(); DeleteFileA(NAME); TC_RUN(no_space_after_comma); TC_RUN(w_with_ccs); TC_RUN(wb_with_ccs); return tc_end(); }

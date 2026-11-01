@@ -8,6 +8,8 @@
  * conf:  documented
  * ref:   MS docs _sprintf_p, _sprintf_p_l, _swprintf_p, _vsprintf_p...: NULL buffer/format or too-small buffer -> invalid parameter handler, returns -1
  * note:  Guard bytes beyond the stated count must stay intact (no overrun).
+ *        wide_small: test bug fixed - with options 0 a wide "%s" means a NARROW string (ISO), so passing L"abcdefgh" printed just "a" (r=1, observed); "%ls" is the wide string conversion
+ *        and gives the intended too-small failure (negative return, observed -2).
  */
 #include "tc.h"
 #include <stdio.h>
@@ -50,7 +52,7 @@ TC_CASE(wide_small)
 {
     wchar_t w[16]; volatile size_t n = 4; int i, ok = 1, r;
     for (i = 0; i < 16; i++) w[i] = G;
-    r = cw(w, n, L"%1$s", L"abcdefgh");
+    r = cw(w, n, L"%1$ls", L"abcdefgh");
     CHECK(r < 0);
     for (i = 4; i < 16; i++) if (w[i] != G) ok = 0;
     CHECK(ok);

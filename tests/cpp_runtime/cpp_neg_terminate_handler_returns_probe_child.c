@@ -12,10 +12,13 @@
  * note:  PROBE: behaviour when a terminate handler returns. Expected: terminate() never returns to its caller and the library
  *        then calls abort(), which (abort message box / Watson disabled by tc_begin) exits with code 3.
  *        Plain names on ucrtbase, decorated C++ names on the older DLLs.
+ *        Win10 22H2 19045 (observed): ucrtbase exports the plain names set_terminate, terminate, _get_terminate, unexpected, set_unexpected (and not
+ *        the decorated C++ names). The harness macro TC_UCRT is never defined by tools/tc.py, so the plain-name branch was dead; the test now selects it with
+ *        TC_AT_LEAST(140) (class F).
  */
 #include "tc.h"
 #include <errno.h>
-#ifdef TC_UCRT
+#if TC_AT_LEAST(140)   /* ucrtbase; NB tools/tc.py never defines TC_UCRT */
 #define N_TERM "terminate"
 #define N_SETTERM "set_terminate"
 #define N_UNEXP "unexpected"

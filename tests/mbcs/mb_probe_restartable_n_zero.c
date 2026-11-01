@@ -6,9 +6,10 @@
  * crt:   ucrtbase msvcr120 msvcr110
  * tier:  p1
  * kind:  positive
- * conf:  probe
+ * conf:  observed
  * ref:   C11 7.29.6.3.2; MS docs mbrtowc
  * note:  PROBES: mbrtowc/mbrlen with n == 0 return (size_t)-2 (C11 says an incomplete sequence; MS implementations are not documented to agree).
+ *        Observed Win10 22H2 ucrtbase: both return 0 (errno untouched); deviates from C11 7.29.6.3.2. Stable.
  */
 #include "tc.h"
 #include <wchar.h>
@@ -31,14 +32,14 @@ TC_CASE(mbrtowc_n0)
     mbs_t st; wchar_t wc = 0; volatile char a = 'A'; char s[2];
     if (!tc_p_mbrtowc) TC_SKIP("mbrtowc not exported");
     s[0] = a; s[1] = 0; memset(&st, 0, sizeof st);
-    CHECK_EQ_U(tc_p_mbrtowc(&wc, s, 0, ST(&st)), (size_t)-2);
+    CHECK_EQ_U(tc_p_mbrtowc(&wc, s, 0, ST(&st)), 0);   /* observed; C11 says -2 */
 }
 TC_CASE(mbrlen_n0)
 {
     mbs_t st; volatile char a = 'A'; char s[2];
     if (!tc_p_mbrlen) TC_SKIP("mbrlen not exported");
     s[0] = a; s[1] = 0; memset(&st, 0, sizeof st);
-    CHECK_EQ_U(tc_p_mbrlen(s, 0, ST(&st)), (size_t)-2);
+    CHECK_EQ_U(tc_p_mbrlen(s, 0, ST(&st)), 0);   /* observed; C11 says -2 */
 }
 int main(void)
 {

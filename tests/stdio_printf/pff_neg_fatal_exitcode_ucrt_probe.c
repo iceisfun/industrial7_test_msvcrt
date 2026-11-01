@@ -9,6 +9,9 @@
  * conf:  probe
  * ref:   MS docs Parameter validation (exact status undocumented)
  * note:  probes: ucrt invalid-parameter abort uses __fastfail -> 0xC0000409; a WER/AeDebug configuration may change this
+ *        HARNESS FIX (class F, Win10 22H2 x64 (19045) ucrtbase.dll observed, zzp_probe5/6: every printf/scanf/strcpy_s "default handler" child exited 0x4d = survived): the mingw-w64 startup code installs
+ *        a no-op invalid-parameter handler (call to _set_invalid_parameter_handler(__mingw_invalidParameterHandler) in main's crt startup), so the CRT's own
+ *        default (terminate) never ran. The child now calls tc_iph_default() (= _set_invalid_parameter_handler(NULL)) first. Test expectations unchanged.
  */
 #include "tc.h"
 #include <stdio.h>
@@ -32,7 +35,7 @@ TC_CASE(exit_code)
 int main(void)
 {
     tc_begin(); CHECK(LOAD_SPRINTF_S());
-    if (tc_child_name()) { char d[2]; volatile double v = 1.5; xsprintf_s(d, 2, "%f", v); return 77; }
+    if (tc_child_name()) { char d[2]; tc_iph_default(); volatile double v = 1.5; xsprintf_s(d, 2, "%f", v); return 77; }
     TC_RUN(exit_code);
     return tc_end();
 }

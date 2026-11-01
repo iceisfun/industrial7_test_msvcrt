@@ -64,6 +64,7 @@ static int child_main(const char *c)
     char b[4]; wchar_t w[8];
     char *volatile nb = NULL; const wchar_t *volatile nwfmt = NULL;
     const wchar_t *volatile badw = L"%y"; volatile int v = 123456;
+    tc_iph_default();
     if (tc_strequ(c, "snprintf_s_overflow_count_ge_size")) { P__snprintf_s(b, sizeof b, 10, "%d", v); return 77; }
     if (tc_strequ(c, "vsnprintf_s_null_buffer")) { cv_snprintf_s(nb, 16, 10, "x"); return 77; }
     if (tc_strequ(c, "snwprintf_s_bad_format")) { P__snwprintf_s(w, 8, _TRUNCATE, badw); return 77; }
