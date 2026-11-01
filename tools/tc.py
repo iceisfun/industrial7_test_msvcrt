@@ -119,7 +119,7 @@ def imports(exe):
     for line in out.splitlines():
         m = re.match(r"\s*DLL Name:\s*(\S+)", line)
         if m: cur = m.group(1).lower(); res.setdefault(cur, set()); continue
-        m = re.match(r"\s*[0-9a-fA-F]+\s+(?:[0-9a-fA-F]+\s+)?(?:\d+\s+)?([A-Za-z_?@$][\w?@$]*)\s*$", line)
+        m = re.match(r"\s*[0-9a-fA-F]+\s+(?:[0-9a-fA-F]+\s+)?(?:<none>\s+|\d+\s+)?(?:[0-9a-fA-F]+\s+)?([A-Za-z_?@$][\w?@$]*)\s*$", line)
         if m and cur: res[cur].add(m.group(1))
     return res
 
