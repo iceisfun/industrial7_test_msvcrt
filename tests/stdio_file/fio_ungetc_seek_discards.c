@@ -7,7 +7,7 @@
  * tier:  p0
  * conf:  observed
  * ref:   C11 7.21.7.10 (pushed-back characters discarded by file positioning); MS docs ungetc
- * note:  deviates from C11 7.21.9.2p5 / 7.21.9.3 (TRIAGE win1093[34])?#934, class B): on ucrtbase 10.0.19045 fseek(f,0,SEEK_SET) and fsetpos after ungetc('Z') do not
+ * note:  deviates from C11 7.21.9.2p5 / 7.21.9.3 (TRIAGE win10, class B): on ucrtbase 10.0.19045 fseek(f,0,SEEK_SET) and fsetpos after ungetc('Z') do not
  *        discard the pushed-back char (ungetc overwrote the buffered 'A'; the seek stays inside the buffer): fgetc returns 'Z' (got=90) and the next 'B'. ftell is 0 as the
  *        standard requires. rewind() does discard (case unchanged).
  */

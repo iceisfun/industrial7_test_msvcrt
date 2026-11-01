@@ -10,7 +10,7 @@
  * note:  Asserts only that the child terminates abnormally (not exit 0, not the 77 survival marker); exact status not asserted.
  *        Win10 22H2 19045 (observed, ucrtbase; TC_AT_LEAST(140) only): signal() with an invalid number (0, 1000, -1, 5, 7, 9, 12, 255) does NOT reach the invalid parameter
  *        handler even with the CRT default handler restored: it returns SIG_ERR with errno EINVAL and the process continues (the MS docs describe the handler call;
- *        Windows deviates). Analysis of ucrtbase : signal() -> signal_failed(), which only sets errno = EINVAL and
+ *        Windows deviates). analysis of ucrtbase: signal() -> signal_failed(), which only sets errno = EINVAL and
  *        returns -1, no _invalid_parameter call. Case child_terminates keeps its name and asserts exit 77 (= survived with SIG_ERR/EINVAL); in-process case
  *        no_handler_call asserts the handler is not called.
  *        [unverified] on msvcr80..120: the original abnormal-termination expectation is kept there.

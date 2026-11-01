@@ -8,7 +8,7 @@
  * ref:   MS docs tmpnam (names are relative to the root: "\s1jo.0" style)
  * note:  PROBE (conf could be documented: MS tmpnam says names are unique in the GetTempPathW dir; newer Win11 ucrtbase uses GetTempPath2W, only 19045 observed): the generated name starts with a backslash and has no further path separator.
  *        Exact shape beyond that is deliberately not asserted.
- *        TRIAGE win1093[34])?#934, class A + F): ucrtbase 10.0.19045 tmpnam(buf) writes GetTempPath()+"sNNN.N" (e.g. C:\Users\ADMINI~1\AppData\Local\Temp\s690.0, 43 chars), not the old
+ *        TRIAGE win10, class A + F): ucrtbase 10.0.19045 tmpnam(buf) writes GetTempPath()+"sNNN.N" (e.g. C:\Users\ADMINI~1\AppData\Local\Temp\s690.0, 43 chars), not the old
  *        "\s1jo.0" root-relative form; the test crashed because its L_tmpnam+16 (=30, mingw L_tmpnam is 14) buffer overflowed. The prefix is compared with GetTempPathA() so it is
  *        independent of the user/TMP value. Old backslash expectation kept for non-UCRT targets (unverified).
  */

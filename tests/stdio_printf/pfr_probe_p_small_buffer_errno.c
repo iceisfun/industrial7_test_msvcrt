@@ -9,7 +9,7 @@
  * ref:   MS docs _sprintf_p (by analogy with sprintf_s)
  * note:  PROBING, each in its own case, what _sprintf_p(b,3,"abcdef") does on a too-small buffer: (a) returns -1 and
  *        invokes the invalid-parameter handler, (b) sets errno ERANGE, (c) writes b[0]=0 (all as sprintf_s does).
- *        OBSERVED on ucrtbase (Win10 22H2 19045 oracle93[34])?#934 integration full run crt-triage-triage-r1): the export __stdio_common_vsprintf_p(options 0, b, 3, "abcdef")
+ *        OBSERVED on ucrtbase (Win10 22H2 19045 reference integration full run triage-r1): the export __stdio_common_vsprintf_p(options 0, b, 3, "abcdef")
  *        returns -2, does NOT call the handler, leaves errno 0 and keeps the truncated output (b[0]=='a'). Class A: the UCRT branch
  *        asserts those values (the baseline build skipped every case: ucrtbase has no _sprintf_p export and TC_UCRT was undefined).
  *        Older CRTs keep the original guesses. Cases renamed ret_and_handler/errno_value/buffer_state.

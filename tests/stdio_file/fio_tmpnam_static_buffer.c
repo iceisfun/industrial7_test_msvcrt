@@ -6,7 +6,7 @@
  * tier:  p1
  * conf:  observed
  * ref:   MS docs tmpnam; C11 7.21.4.4
- * note:  TRIAGE win1093[34])?#934, class A): ucrtbase 10.0.19045 tmpnam(NULL) returns the same static buffer holding GetTempPath()+"sNNN.N" (43 chars, observed in a scratch
+ * note:  TRIAGE win10, class A): ucrtbase 10.0.19045 tmpnam(NULL) returns the same static buffer holding GetTempPath()+"sNNN.N" (43 chars, observed in a scratch
  *        probe: ...\Temp\s690.1 then ...\s690.2, same pointer), which is longer than the toolchain's L_tmpnam (14). The bound is therefore _MAX_PATH (260) on UCRT; the static-buffer
  *        identity and name-change assertions are unchanged. Build dependence: newer Win11 ucrtbase builds use GetTempPath2W (SystemTemp when running as SYSTEM); only 19045 observed. [unverified] that the real UCRT stdio.h defines L_tmpnam as 260.
  */

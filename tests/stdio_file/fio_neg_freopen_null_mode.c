@@ -7,7 +7,7 @@
  * tier:  p0
  * conf:  observed
  * ref:   MS docs freopen (invalid NULL mode -> invalid parameter handler, EINVAL)
- * note:  TRIAGE win1093[34])?#934, class A): case name_and_mode_null on ucrtbase 10.0.19045: freopen(NULL, NULL, fp) returns NULL with errno EBADF (9) and does NOT
+ * note:  TRIAGE win10, class A): case name_and_mode_null on ucrtbase 10.0.19045: freopen(NULL, NULL, fp) returns NULL with errno EBADF (9) and does NOT
  *        call the invalid-parameter handler (observed got=9, iph 0); case mode_null (name given, mode NULL) still sees EINVAL + handler. Old expectation kept for non-UCRT.
  */
 #include "tc.h"

@@ -8,7 +8,7 @@
  * conf:  observed
  * ref:   MS _filbuf legacy behaviour
  * note:  PROBE: errno == EBADF after fread on a stream opened "w". Some CRT generations may leave errno untouched.
- *        TRIAGE win1093[34])?#934, class A): fread on a stream opened "w" leaves errno untouched (0) on ucrtbase 10.0.19045 (observed got=0). EBADF kept for non-UCRT (unverified).
+ *        TRIAGE win10, class A): fread on a stream opened "w" leaves errno untouched (0) on ucrtbase 10.0.19045 (observed got=0). EBADF kept for non-UCRT (unverified).
  */
 #include "tc.h"
 #define TC_S2(x) #x

@@ -9,7 +9,7 @@
  * ref:   MS docs _lock_file, _unlock_file; parameter validation
  * note:  PROBE: the UCRT validates a NULL FILE* in _lock_file/_unlock_file (invalid-parameter handler, errno EINVAL)
  *        instead of crashing. Older CRTs are excluded because they would dereference NULL.
- *        TRIAGE win1093[34])?#934, class C): ucrtbase 10.0.19045 does NOT validate a NULL FILE* in _lock_file/_unlock_file: the child dies with
+ *        TRIAGE win10, class C): ucrtbase 10.0.19045 does NOT validate a NULL FILE* in _lock_file/_unlock_file: the child dies with
  *        STATUS_ACCESS_VIOLATION 0xC0000005 (observed got=0xc0000005 for both). The case now asserts that crash status in the child process.
  */
 #include "tc.h"

@@ -8,7 +8,7 @@
  * conf:  observed
  * ref:   MS docs: parameter validation
  * note:  PROBE: _wremove(NULL) invokes the invalid-parameter handler once, returns -1, errno EINVAL (msvcr80+).
- *        TRIAGE win1093[34])?#934, class A): ucrtbase 10.0.19045 _wremove(NULL) returns -1 with errno ENOENT (2) and no handler call (observed got=2, iph 0).
+ *        TRIAGE win10, class A): ucrtbase 10.0.19045 _wremove(NULL) returns -1 with errno ENOENT (2) and no handler call (observed got=2, iph 0).
  *        Old EINVAL+handler expectation kept for non-UCRT targets (unverified).
  */
 #include "tc.h"

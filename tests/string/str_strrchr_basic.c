@@ -24,7 +24,7 @@ TC_CASE(path) { static const char s[] = "C:\\dir\\file.txt"; vs = s; vc = '\\'; 
 /* High-byte search character. Class B: OBSERVED on Win10 22H2 ucrtbase, strrchr(s, 0xE9) (c passed as the int 0xE9, which C11 7.24.5.5
  * says is converted to char) finds the byte when the string starts at a 16-byte-aligned address. The behaviour at other start offsets
  * (NULL at 1..13) is a property of the CRT's vectorised strrchr, so CPU-feature dependent: it is kept in the separate probe
- * str_probe_strrchr_highbit_int_offsets (reference CPU: a server-class x86-64 CPU, AVX2, no AVX-512) and is NOT asserted here. Passing (char)0xE9
+ * str_probe_strrchr_highbit_int_offsets (reference CPU: server-class x86-64 CPU, AVX2, no AVX-512) and is NOT asserted here. Passing (char)0xE9
  * (c = -23) finds it at every offset. The buffer is 16-byte aligned so the offsets are deterministic (not ASLR dependent). */
 static char buf[64] __attribute__((aligned(16)));
 static char *place(int off)

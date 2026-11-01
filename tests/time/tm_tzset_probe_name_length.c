@@ -10,7 +10,7 @@
  * ref:   MS docs _tzset
  * note:  PROBES how many characters of a zone name are kept: believed full name ("ABCDE") on ucrtbase,
  *        truncated to 3 characters ("ABC") on the older CRTs. Nothing is documented.
- *        OBSERVED (Win10 22H2 19045 oracle93[34])?#934 integration full run crt-triage-triage-r1 and the baseline): ucrtbase ALSO keeps 3 characters, _get_tzname(.., 0) gives "ABC" for
+ *        OBSERVED (Win10 22H2 19045 reference integration full run triage-r1 and the baseline): ucrtbase ALSO keeps 3 characters, _get_tzname(.., 0) gives "ABC" for
  *        TZ=ABCDE5 (consistent with MS docs _tzset: "tzn: three-letter time-zone name"). Class A: the earlier ">=140 -> ABCDE" gate
  *        was not observed (it never ran: TC_UCRT was undefined in the baseline build).
  */

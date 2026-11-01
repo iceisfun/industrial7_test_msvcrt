@@ -9,7 +9,7 @@
  * ref:   MS docs _tell: returns -1L on error
  * note:  PROBE: result of the 32-bit _tell/_lseek when the position is >= 2^31 (not representable in long).
  *        Assumed: ucrt returns -1 (errno EOVERFLOW); older CRTs return a negative long (-1 or the wrapped value). Whole file is a probe.
- *        OBSERVED on ucrtbase (Win10 22H2 19045 oracle93[34])?#934 integration full run crt-triage-triage-r1): _tell at 2^31 returns -1; _lseek(fd,1,SEEK_CUR) from 0x7fffffff
+ *        OBSERVED on ucrtbase (Win10 22H2 19045 reference integration full run triage-r1): _tell at 2^31 returns -1; _lseek(fd,1,SEEK_CUR) from 0x7fffffff
  *        returns -1 with errno EINVAL (22), not EOVERFLOW (class A; first run of the TC_UCRT branch, which the baseline build skipped).
  */
 #include "tc.h"

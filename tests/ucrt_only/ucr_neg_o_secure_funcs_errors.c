@@ -9,7 +9,7 @@
  * conf:  observed
  * ref:   MS docs strcpy_s/wcscpy_s (EINVAL for NULL, ERANGE for small dest, dest[0]=0), memcpy_s, _itoa_s (ERANGE); _o_ aliases are the same functions
  * note:  Buffer state after _itoa_s failure and memcpy_s dest zeroing are not asserted here (see ucr_neg_o_memcpy_s_zeroes_probe).
- * note:  Class A93[34])?#934, Win10 22H2 19045; raw "tc_iph_count == 1 got=0 want=1" x5): _o_ exports run in the separate OS state (wrapped_invoke), so the
+ * note:  Class A, Win10 22H2 19045; raw "tc_iph_count == 1 got=0 want=1" x5): _o_ exports run in the separate OS state (wrapped_invoke), so the
  *        invalid-parameter handler that fires is the OS-state one (_o__set_invalid_parameter_handler), not the app one. The app handler stays untouched (0),
  *        the OS-state handler is counted (1) and the OS errno (_o__errno) carries the code. Return codes unchanged. Deterministic.
  */

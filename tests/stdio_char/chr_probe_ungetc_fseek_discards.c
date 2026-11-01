@@ -9,7 +9,7 @@
  * note:  Probes whether fseek(0, SEEK_CUR) / rewind after ungetc(different char) discard the pushed char and re-read the file byte.
  *        The standard says yes; the CRT writes the pushed char into its buffer and may satisfy a within-buffer seek without
  *        re-reading the file, so real Windows may return the pushed char (or a clobbered byte). Unknown: this is the question.
- *        TRIAGE win1093[34])?#934, class B): deviates from C11 7.21.9.2p5: on ucrtbase 10.0.19045 fseek(f,0,SEEK_CUR) after ungetc('Z') does not discard the
+ *        TRIAGE win10, class B): deviates from C11 7.21.9.2p5: on ucrtbase 10.0.19045 fseek(f,0,SEEK_CUR) after ungetc('Z') does not discard the
  *        pushed-back char: the next fgetc returns 'Z' (got=90) and then 'd' (ungetc overwrote the buffered byte; the seek stays inside the buffer). rewind() does discard.
  */
 #include "tc.h"

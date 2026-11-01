@@ -6,7 +6,7 @@
  * tier:  p2
  * conf:  observed
  * ref:   MS docs printf type field (%Z = ANSI_STRING/UNICODE_STRING address, %n disabled by default in ucrt)
- * note:  OBSERVED on ucrtbase (Win10 22H2 x64 (19045), reference, observed twice; skeptic probe runs
+ * note:  OBSERVED on ucrtbase (Win10 22H2 x64 (19045), reference, observed twice; skeptic probe runs run and run
  *        raw/zzd_dot_probe_p0.txt, plus zzp_probe2): %Z IS supported by ucrt, but the narrow printf family takes plain %Z as a UNICODE_STRING*
  *        and %hZ as an ANSI_STRING* (MS docs say ANSI by default; this deviates from the docs, class B). Original intent restored with correctly typed
  *        arguments: "[%*hZ]|%d" with an ANSI_STRING "ab" and width 5 -> "[   ab]|7", r==9; "[%*Z]|%d" with a UNICODE_STRING L"ab" -> same.

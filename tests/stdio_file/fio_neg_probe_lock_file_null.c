@@ -12,7 +12,7 @@
  *         Probes whether _lock_file(NULL)/_unlock_file(NULL) validate the argument (iph + EINVAL) instead of crashing.
  *        Run in a child with an iph handler installed so a crash does not kill the parent.
  *        Exit codes: 0 = validated (iph 1, EINVAL), 1 = returned without validation, crash = non-zero other.
- *        TRIAGE win1093[34])?#934, class C): ucrtbase 10.0.19045 does not validate NULL in _lock_file/_unlock_file; the child crashes with
+ *        TRIAGE win10, class C): ucrtbase 10.0.19045 does not validate NULL in _lock_file/_unlock_file; the child crashes with
  *        STATUS_ACCESS_VIOLATION 0xC0000005 (observed for both). The cases now assert that crash status. Exit codes: 0xC0000005 = crash, 77 = returned.
  */
 #include "tc.h"

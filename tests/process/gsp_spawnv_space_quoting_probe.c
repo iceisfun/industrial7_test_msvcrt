@@ -10,7 +10,7 @@
  * note:  PROBE: raw child command line for an argv element containing a space. Believed: msvcrt..msvcr120 copy argv verbatim
  *        (per the docs), while ucrtbase wraps an element containing a space in double quotes. If ucrtbase turns out to
  *        be verbatim too, change the TC_UCRT expectation.
- *        OBSERVED (Win10 22H2 19045 oracle93[34])?#934 integration full run crt-triage-triage-r1): ucrtbase ALSO passes the element verbatim: the child sees "--tc-child=sp a b"
+ *        OBSERVED (Win10 22H2 19045 reference integration full run triage-r1): ucrtbase ALSO passes the element verbatim: the child sees "--tc-child=sp a b"
  *        (baseline built without TC_UCRT asserted that and PASSED; the quoted TC_UCRT expectation returned 92). Class A: the TC_UCRT
  *        expectation is now the verbatim command line, same as the older CRTs; stable across the baseline run and two integration runs.
  */

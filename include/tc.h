@@ -166,7 +166,7 @@ static int tc_iph_install(void)  /* returns 1 if the CRT has the API */
 }
 
 /* OS-state (dual_state_global) invalid-parameter handler and errno. ucrtbase _o_* exports run in a separate OS state with their own errno
- * (_o__errno) and their own handler (_o__set_invalid_parameter_handler); the app-state errno/handler are not touched by them93[34])?#934). */
+ * (_o__errno) and their own handler (_o__set_invalid_parameter_handler); the app-state errno/handler are not touched by them. */
 static volatile int tc_oiph_count;
 static void __cdecl tc_oiph(const wchar_t *e, const wchar_t *f, const wchar_t *fl, unsigned int l, uintptr_t r)
 { (void)e; (void)f; (void)fl; (void)l; (void)r; tc_oiph_count++; }
@@ -184,7 +184,7 @@ static int *tc_o_errno_ptr(void)
 static int tc_o_errno(void) { int *p = tc_o_errno_ptr(); return p ? *p : -12345; }
 static void tc_o_reset(void) { int *p = tc_o_errno_ptr(); if (p) *p = 0; tc_oiph_count = 0; }
 
-/* Restore the CRT's own DEFAULT invalid-parameter behaviour (fatal on ucrt/msvcr80+; __fastfail 0xC0000409 on ucrtbase) - class F93[34])?#934.
+/* Restore the CRT's own DEFAULT invalid-parameter behaviour (fatal on ucrt/msvcr80+; __fastfail 0xC0000409 on ucrtbase) - class F.
  * The mingw-w64 startup code (crtexe.c: __mingw_invalidParameterHandler) installs a silent no-op handler before main(), so in a
  * toolchain-built exe the CRT default handler never runs and a "default handler is fatal" child just returns from the failing call
  * (observed on Win10 22H2 19045: child exit 77 instead of 0xC0000409). Opt-in: a child that asserts the default (fatal) behaviour calls

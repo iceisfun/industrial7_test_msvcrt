@@ -8,7 +8,7 @@
  * conf:  observed
  * ref:   MS docs rename, _wrename
  * note:  PROBE: _wrename(NULL,x)/_wrename(x,NULL) returns nonzero, errno EINVAL, invalid parameter handler called once. Validation is not explicitly documented on the rename page.
- *        TRIAGE win1093[34])?#934, class A): ucrtbase 10.0.19045 _wrename with a NULL argument returns nonzero, errno ENOENT (2), no handler call (observed got=2, iph 0).
+ *        TRIAGE win10, class A): ucrtbase 10.0.19045 _wrename with a NULL argument returns nonzero, errno ENOENT (2), no handler call (observed got=2, iph 0).
  *        Old EINVAL+handler expectation kept for non-UCRT targets (unverified).
  */
 #include "tc.h"

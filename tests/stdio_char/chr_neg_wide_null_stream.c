@@ -8,7 +8,7 @@
  * conf:  observed
  * ref:   MS docs fgetwc, fputwc, ungetwc, fgetws, fputws; parameter validation
  * note:  Each wide function with a NULL FILE*: failure value, errno EINVAL and one handler call.
- *        TRIAGE win1093[34])?#934, class A): fputws(L"x", NULL) returns EOF (-1), not WEOF (0xFFFF): observed on ucrtbase 10.0.19045 (got=-1);
+ *        TRIAGE win10, class A): fputws(L"x", NULL) returns EOF (-1), not WEOF (0xFFFF): observed on ucrtbase 10.0.19045 (got=-1);
  *        C11 7.29.3.4 also specifies EOF for fputws errors. errno EINVAL and one handler call unchanged.
  */
 #include "tc.h"

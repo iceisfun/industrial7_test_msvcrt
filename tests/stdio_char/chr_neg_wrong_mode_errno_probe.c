@@ -9,7 +9,7 @@
  * ref:   none (MS docs do not state errno for wrong-mode stream I/O)
  * note:  Probes: fgetc on a write-only stream and fputc on a read-only stream set errno == EBADF (the CRT maps the failing _read/_write
  *        to EBADF). Most likely value; not documented for these functions.
- *        TRIAGE win1093[34])?#934, class A): on ucrtbase 10.0.19045 fgetc on a write-only stream returns EOF and leaves errno untouched (0); the fputc_readonly case
+ *        TRIAGE win10, class A): on ucrtbase 10.0.19045 fgetc on a write-only stream returns EOF and leaves errno untouched (0); the fputc_readonly case
  *        still sees EBADF. The EBADF expectation is kept for the non-UCRT targets (not run in the reference).
  */
 #include "tc.h"

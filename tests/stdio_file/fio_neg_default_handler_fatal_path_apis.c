@@ -9,7 +9,7 @@
  * conf:  documented
  * ref:   MS docs "Parameter validation"; docs for rename, fsetpos, freopen, _fseek/_fseeki64, tmpnam_s
  * note:  Each bad call runs in a child process; without a handler the process must terminate abnormally.
- *        TRIAGE win1093[34])?#934): (class F) the child now runs with the CRT default invalid-parameter handler (tc.h tc_begin restores it; mingw startup had installed a silent one, so
+ *        TRIAGE win10: (class F) the child now runs with the CRT default invalid-parameter handler (tc.h tc_begin restores it; mingw startup had installed a silent one, so
  *        children returned 77). (class A) c_rename: ucrtbase 10.0.19045 rename(NULL, x) does not validate and does not terminate (child exits 77, observed), consistent with
  *        fio_neg_rename_null_args (errno ENOENT, no handler call). The other four cases terminate as documented.
  */

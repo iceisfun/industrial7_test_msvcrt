@@ -10,7 +10,7 @@
  * ref:   MS docs _aligned_malloc (returns NULL on failure)
  * note:  impossible request (beyond address space) must fail with NULL; errno not asserted here.
  *        SIZE_MAX-style requests (size+padding wraps) moved to ucr_neg_aligned_malloc_wrap_probe
- *        Build defect fixed93[34])?#934): on Win64 the only call sits behind TC_HAZARD (compiled out by default), so gcc dropped it and
+ *        Build defect fixed: on Win64 the only call sits behind TC_HAZARD (compiled out by default), so gcc dropped it and
  *        the import check reported NOT_IMPORTED. The functions are now bound through volatile pointers set in main(), which keeps the
  *        ucrtbase imports in every build; the measured call (and the hazard gating) is unchanged.
  */

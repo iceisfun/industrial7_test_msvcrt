@@ -9,7 +9,7 @@
  * conf:  observed
  * ref:   MS docs tmpnam_s
  * note:  PROBE: tmpnam_s(buf, 0) returns EINVAL and invokes the invalid parameter handler (vs ERANGE, no handler).
- *        TRIAGE win1093[34])?#934, class A): on ucrtbase 10.0.19045 tmpnam_s(buf, 0) returns ERANGE (34) without invoking the handler (observed got=34, iph 0); a non-NULL
+ *        TRIAGE win10, class A): on ucrtbase 10.0.19045 tmpnam_s(buf, 0) returns ERANGE (34) without invoking the handler (observed got=34, iph 0); a non-NULL
  *        buffer that is too small is the ERANGE row of the MS tmpnam_s return table. EINVAL+handler kept for non-UCRT targets (unverified).
  */
 #include "tc.h"

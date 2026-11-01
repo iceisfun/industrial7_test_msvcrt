@@ -44,9 +44,9 @@ allocates in `TC_HAZARD(...)`.
 - 5,985 tests, lint clean (`tools/tc.py lint`). ucrtbase build: 5,605 of 5,605 tests build (`tools/tc.py build --crt ucrtbase`);
   hazard cases stay compiled out (`TC SKIP ... hazard`). The other per-CRT targets (msvcrt, msvcr80..120) were not rebuilt or
   run on Windows in this pass; their `#else` / `TC_CRT_VER < 140` expectations are unverified.
-- **Real Windows 10 22H2 x64 (ucrtbase), first contact93[34])?#933, corpus 9b9a139):** 5,604 built, PASS 4,811 (85.8 %),
+- **Real Windows 10 22H2 x64 (ucrtbase), first contact, corpus 9b9a139):** 5,604 built, PASS 4,811 (85.8 %),
   FAIL 763, CRASH 28, TIMEOUT 2; 2 build defects (`tm_neg_asctime_s_fields`, `ucr_neg_aligned_malloc_huge`).
-- **After the Win10 triage93[34])?#934, branch the Win10 triage branch, payload built from commit abf620e09):** every one of the
+- **After the Win10 triage, branch the Win10 triage branch, payload built from commit abf620e09):** every one of the
   793 non-pass rows plus the 2 build defects is classified in `results/triage-win10.tsv` (one row each; per-shard ledgers in
   `results/triage-win10.d/`). Full reference run: **PASS 5,605 of 5,605 built tests (100 %)**, no FAIL, CRASH or TIMEOUT; repeated
   from a clean overlay with identical per-test results (runs `triage-run-1` and `triage-run-2`).
@@ -62,7 +62,7 @@ allocates in `TC_HAZARD(...)`.
   ntdll 10.0.19041.2788, ntoskrnl 10.0.19041.2965, kernelbase 10.0.19041.2788; base image sha256
   a1f7e36d2c93ce0fe5b5099e3748a9ffaf4fffcf39b7d3ba386b0eced23e18e9 (ISO sha256
   a6f470ca6d331eb353b815c043e327a347f594f37ff525f17764738fe812852e); virtualised
-  4 GB / 4 vCPU, guest clock pinned to 2026-09-30T12:00:00. Results depend on these pins: CPU-dispatch,
+  (server-class x86-64 CPU), 4 GB / 4 vCPU, guest clock pinned to 2026-09-30T12:00:00. Results depend on these pins: CPU-dispatch,
   build/UBR and the pinned clock/time zone are flagged in the affected test notes.
 - Many tests remain `probe` or `inferred` where only the ucrtbase branch was observed; Windows results stay the source of truth:
   fix tests, not the reverse.

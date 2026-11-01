@@ -8,7 +8,7 @@
  * conf:  observed
  * ref:   MS docs: parameter validation
  * note:  PROBE: rename with NULL oldname or newname invokes the invalid-parameter handler once, returns nonzero, errno EINVAL (msvcr80+ validation; rename docs list EACCES/ENOENT/EINVAL for bad names only).
- *        TRIAGE win1093[34])?#934, class A): ucrtbase 10.0.19045 rename(NULL, x) and rename(x, NULL) return nonzero with errno ENOENT (2) and no handler call
+ *        TRIAGE win10, class A): ucrtbase 10.0.19045 rename(NULL, x) and rename(x, NULL) return nonzero with errno ENOENT (2) and no handler call
  *        (observed got=2, iph 0 for both). Old EINVAL+handler expectation kept for non-UCRT targets (unverified).
  */
 #include "tc.h"

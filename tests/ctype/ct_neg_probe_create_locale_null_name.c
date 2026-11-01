@@ -10,7 +10,7 @@
  * ref:   MS docs _create_locale
  * note:  PROBE: _create_locale(LC_ALL, NULL) returns NULL; ucrt sets errno=EINVAL and calls the IPH once. The
  *        errno/IPH checks are in their own cases and only run on ucrtbase.
- *        OBSERVED on ucrtbase (Win10 22H2 19045 oracle93[34])?#934 integration full run crt-triage-triage-r1): NULL is returned, errno is left unchanged (0) and the invalid-parameter
+ *        OBSERVED on ucrtbase (Win10 22H2 19045 reference integration full run triage-r1): NULL is returned, errno is left unchanged (0) and the invalid-parameter
  *        handler is NOT called (class A: the EINVAL/IPH guess was wrong; MS docs _create_locale only say NULL is returned for invalid
  *        arguments). Cases renamed errno_unchanged/no_iph. First run of these cases: TC_UCRT was undefined in the baseline build.
  */
